@@ -95,6 +95,7 @@ async function getActiveOrderForDriver(phone) {
   if (!driver) return null;
   const delivery = await prisma.delivery.findFirst({
     where: { driverId: driver.id, order: { status: 'assigned' } },
+    orderBy: { id: 'desc' },
     include: { order: true },
   });
   return delivery?.order || null;
