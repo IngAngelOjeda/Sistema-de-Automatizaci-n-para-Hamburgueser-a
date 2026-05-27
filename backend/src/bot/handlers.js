@@ -232,7 +232,7 @@ export async function handleMessage(client, message, io) {
     if (activeOrder) {
       await client.sendText(
         phone,
-        `⏳ Ya tenés un pedido activo (*${activeOrder.orderNumber}*) en proceso. ¡Te avisamos cuando esté listo!`
+        `⏳ Ya tenés un pedido activo (*${activeOrder.orderNumber}*) en proceso. ¡Te avisamos cuando esté en camino!`
       );
       return;
     }
