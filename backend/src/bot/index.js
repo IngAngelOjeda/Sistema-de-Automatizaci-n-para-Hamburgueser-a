@@ -85,32 +85,36 @@ export async function initBot(io) {
   sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', async (update) => {
-    const { connection, lastDisconnect, qr } = update;
+    try {
+      const { connection, lastDisconnect, qr } = update;
 
-    if (qr) {
-      const base64 = await QRCode.toDataURL(qr);
-      emitStatus(io, 'qr', base64);
-    }
-
-    if (connection === 'open') {
-      console.log('[Bot] WhatsApp conectado y listo.');
-      emitStatus(io, 'connected');
-    }
-
-    if (connection === 'close') {
-      const statusCode = lastDisconnect?.error?.output?.statusCode;
-      const loggedOut = statusCode === DisconnectReason.loggedOut;
-
-      if (loggedOut) {
-        console.warn('[Bot] Sesión cerrada. Eliminando credenciales y generando nuevo QR...');
-        const sessionPath = process.env.WA_SESSION_PATH || './wa-session';
-        await rm(sessionPath, { recursive: true, force: true });
-        setTimeout(() => initBot(io), 1000);
-      } else {
-        console.log('[Bot] Reconectando en 5s...');
-        setTimeout(() => initBot(io), 5000);
+      if (qr) {
+        const base64 = await QRCode.toDataURL(qr);
+        emitStatus(io, 'qr', base64);
       }
-      return;
+
+      if (connection === 'open') {
+        console.log('[Bot] WhatsApp conectado y listo.');
+        emitStatus(io, 'connected');
+      }
+
+      if (connection === 'close') {
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const loggedOut = statusCode === DisconnectReason.loggedOut;
+
+        if (loggedOut) {
+          console.warn('[Bot] Sesión cerrada. Eliminando credenciales y generando nuevo QR...');
+          const sessionPath = process.env.WA_SESSION_PATH || './wa-session';
+          await rm(sessionPath, { recursive: true, force: true });
+          setTimeout(() => initBot(io), 1000);
+        } else {
+          console.log('[Bot] Reconectando en 5s...');
+          setTimeout(() => initBot(io), 5000);
+        }
+      }
+    } catch (err) {
+      console.error('[Bot] Error en connection.update:', err);
+      setTimeout(() => initBot(io), 5000);
     }
   });
 
