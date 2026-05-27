@@ -41,6 +41,45 @@ function PinGate({ children }) {
   );
 }
 
+// ── Tab: Pedidos — sub-components (module-level to prevent remount on re-render) ─
+const TABLE_HEADERS = ['#', 'Cliente', 'Tipo', 'Dirección', 'Total', 'Estado', 'Hora', 'Acción'];
+
+function OrderRow({ o, actions }) {
+  return (
+    <tr className="border-t">
+      <td className="px-4 py-3 font-mono font-semibold">{o.orderNumber}</td>
+      <td className="px-4 py-3">{o.clientName}</td>
+      <td className="px-4 py-3">{o.deliveryType === 'delivery' ? '🛵' : '🏠'}</td>
+      <td className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate">
+        {o.clientAddress || (o.locationUrl
+          ? <a href={o.locationUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">Ver en Maps</a>
+          : '–')}
+      </td>
+      <td className="px-4 py-3">{SYMBOL}{o.totalAmount?.toLocaleString('es-PY')}</td>
+      <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
+      <td className="px-4 py-3 text-gray-500 text-xs">{new Date(o.createdAt).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</td>
+      <td className="px-4 py-3">{actions}</td>
+    </tr>
+  );
+}
+
+function OrderTable({ rows }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm bg-white rounded-xl shadow">
+        <thead className="bg-gray-50 text-left">
+          <tr>
+            {TABLE_HEADERS.map((h) => (
+              <th key={h} className="px-4 py-3 font-semibold">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{rows}</tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Tab: Pedidos ──────────────────────────────────────────────────────────────
 function OrdersTab() {
   const [orders, setOrders] = useState([]);
@@ -93,44 +132,6 @@ function OrdersTab() {
   const activeOrders = orders.filter((o) => ['assigned', 'delivering'].includes(o.status) && matchesSearch(o));
   const doneOrders = orders.filter((o) => ['delivered', 'cancelled'].includes(o.status) && matchesSearch(o));
   const activeDrivers = drivers.filter((d) => d.active);
-
-  function OrderRow({ o, actions }) {
-    return (
-      <tr className="border-t">
-        <td className="px-4 py-3 font-mono font-semibold">{o.orderNumber}</td>
-        <td className="px-4 py-3">{o.clientName}</td>
-        <td className="px-4 py-3">{o.deliveryType === 'delivery' ? '🛵' : '🏠'}</td>
-        <td className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate">
-          {o.clientAddress || (o.locationUrl
-            ? <a href={o.locationUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">Ver en Maps</a>
-            : '–')}
-        </td>
-        <td className="px-4 py-3">{SYMBOL}{o.totalAmount?.toLocaleString('es-PY')}</td>
-        <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
-        <td className="px-4 py-3 text-gray-500 text-xs">{new Date(o.createdAt).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</td>
-        <td className="px-4 py-3">{actions}</td>
-      </tr>
-    );
-  }
-
-  const TABLE_HEADERS = ['#', 'Cliente', 'Tipo', 'Dirección', 'Total', 'Estado', 'Hora', 'Acción'];
-
-  function OrderTable({ rows }) {
-    return (
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm bg-white rounded-xl shadow">
-          <thead className="bg-gray-50 text-left">
-            <tr>
-              {TABLE_HEADERS.map((h) => (
-                <th key={h} className="px-4 py-3 font-semibold">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>{rows}</tbody>
-        </table>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
