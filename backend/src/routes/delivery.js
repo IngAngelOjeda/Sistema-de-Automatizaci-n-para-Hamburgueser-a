@@ -64,7 +64,11 @@ router.post('/:orderId/assign', async (req, res) => {
           `🍔 Pedido:\n${itemLines}\n\n` +
           `💰 Total: ${symbol}${order.totalAmount.toLocaleString('es-PY')}\n\n` +
           `Respondé *TOMADO* cuando salgas a entregar.`;
-        await botState.client.sendText(`${driver.phone}@s.whatsapp.net`, msg);
+        try {
+          await botState.client.sendText(`${driver.phone}@s.whatsapp.net`, msg);
+        } catch (waErr) {
+          console.error('[Delivery] Error enviando WhatsApp al repartidor:', waErr.message);
+        }
       }
     }
 
