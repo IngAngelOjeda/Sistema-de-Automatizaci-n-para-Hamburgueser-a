@@ -44,58 +44,166 @@ function PinGate({ children }) {
 // ── Tab: Pedidos ──────────────────────────────────────────────────────────────
 function OrdersTab() {
   const [orders, setOrders] = useState([]);
-  const [filter, setFilter] = useState('');
+  const [drivers, setDrivers] = useState([]);
+  const [selectedDriver, setSelectedDriver] = useState({});
   const [search, setSearch] = useState('');
 
+  async function fetchOrders() {
+    const data = await fetch('/api/orders').then((r) => r.json());
+    setOrders(data);
+  }
+
   useEffect(() => {
-    const url = filter ? `/api/orders?status=${filter}` : '/api/orders';
-    fetch(url).then((r) => r.json()).then(setOrders);
-  }, [filter]);
+    fetchOrders();
+    fetch('/api/delivery/drivers').then((r) => r.json()).then(setDrivers);
+  }, []);
 
-  const visible = orders.filter((o) =>
-    !search || o.orderNumber.includes(search.toUpperCase()) || o.clientName.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || '');
+    socket.on('new_order', fetchOrders);
+    socket.on('order_updated', fetchOrders);
+    return () => socket.disconnect();
+  }, []);
 
-  return (
-    <div>
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <input
-          className="border rounded-lg px-3 py-2 text-sm w-48"
-          placeholder="Buscar por número o cliente…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <select className="border rounded-lg px-3 py-2 text-sm" value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="">Todos los estados</option>
-          {['pending','confirmed','preparing','ready','delivering','delivered','cancelled'].map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
+  async function confirmAndAssign(order) {
+    const driverId = selectedDriver[order.id];
+    if (order.deliveryType === 'delivery' && !driverId) {
+      alert('Seleccioná un repartidor para el delivery');
+      return;
+    }
+    await fetch(`/api/delivery/${order.id}/assign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverId: driverId ? Number(driverId) : null }),
+    });
+    fetchOrders();
+  }
+
+  async function markDelivered(orderId) {
+    await fetch(`/api/delivery/${orderId}/delivered`, { method: 'PATCH' });
+    fetchOrders();
+  }
+
+  const matchesSearch = (o) =>
+    !search ||
+    o.orderNumber.includes(search.toUpperCase()) ||
+    o.clientName.toLowerCase().includes(search.toLowerCase());
+
+  const pendingOrders = orders.filter((o) => o.status === 'pending' && matchesSearch(o));
+  const activeOrders = orders.filter((o) => ['assigned', 'delivering'].includes(o.status) && matchesSearch(o));
+  const doneOrders = orders.filter((o) => ['delivered', 'cancelled'].includes(o.status) && matchesSearch(o));
+  const activeDrivers = drivers.filter((d) => d.active);
+
+  function OrderRow({ o, actions }) {
+    return (
+      <tr className="border-t">
+        <td className="px-4 py-3 font-mono font-semibold">{o.orderNumber}</td>
+        <td className="px-4 py-3">{o.clientName}</td>
+        <td className="px-4 py-3">{o.deliveryType === 'delivery' ? '🛵' : '🏠'}</td>
+        <td className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate">
+          {o.clientAddress || (o.locationUrl
+            ? <a href={o.locationUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">Ver en Maps</a>
+            : '–')}
+        </td>
+        <td className="px-4 py-3">{SYMBOL}{o.totalAmount?.toLocaleString('es-PY')}</td>
+        <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
+        <td className="px-4 py-3 text-gray-500 text-xs">{new Date(o.createdAt).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</td>
+        <td className="px-4 py-3">{actions}</td>
+      </tr>
+    );
+  }
+
+  const TABLE_HEADERS = ['#', 'Cliente', 'Tipo', 'Dirección', 'Total', 'Estado', 'Hora', 'Acción'];
+
+  function OrderTable({ rows }) {
+    return (
       <div className="overflow-x-auto">
         <table className="w-full text-sm bg-white rounded-xl shadow">
           <thead className="bg-gray-50 text-left">
             <tr>
-              {['#', 'Cliente', 'Teléfono', 'Tipo', 'Total', 'Estado', 'Hora'].map((h) => (
+              {TABLE_HEADERS.map((h) => (
                 <th key={h} className="px-4 py-3 font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody>
-            {visible.map((o) => (
-              <tr key={o.id} className="border-t">
-                <td className="px-4 py-3 font-mono font-semibold">{o.orderNumber}</td>
-                <td className="px-4 py-3">{o.clientName}</td>
-                <td className="px-4 py-3">{o.clientPhone}</td>
-                <td className="px-4 py-3">{o.deliveryType === 'delivery' ? '🛵' : '🏠'}</td>
-                <td className="px-4 py-3">{SYMBOL}{o.totalAmount?.toLocaleString('es-PY')}</td>
-                <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
-                <td className="px-4 py-3 text-gray-500">{new Date(o.createdAt).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</td>
-              </tr>
-            ))}
-          </tbody>
+          <tbody>{rows}</tbody>
         </table>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <input
+        className="border rounded-lg px-3 py-2 text-sm w-64"
+        placeholder="Buscar por número o cliente…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      {/* Nuevos pedidos */}
+      <section>
+        <h2 className="font-semibold text-gray-700 mb-2">Nuevos pedidos ({pendingOrders.length})</h2>
+        {pendingOrders.length === 0 ? (
+          <p className="text-gray-400 text-sm">No hay pedidos pendientes.</p>
+        ) : (
+          <OrderTable rows={pendingOrders.map((o) => (
+            <OrderRow key={o.id} o={o} actions={
+              <div className="flex gap-2 items-center">
+                {o.deliveryType === 'delivery' && (
+                  <select
+                    className="border rounded px-2 py-1 text-xs"
+                    value={selectedDriver[o.id] || ''}
+                    onChange={(e) => setSelectedDriver((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                  >
+                    <option value="">Repartidor…</option>
+                    {activeDrivers.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  onClick={() => confirmAndAssign(o)}
+                  className="bg-orange-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-orange-700 whitespace-nowrap"
+                >
+                  {o.deliveryType === 'delivery' ? 'Confirmar y asignar' : 'Confirmar pedido'}
+                </button>
+              </div>
+            } />
+          ))} />
+        )}
+      </section>
+
+      {/* En curso */}
+      <section>
+        <h2 className="font-semibold text-gray-700 mb-2">En curso ({activeOrders.length})</h2>
+        {activeOrders.length === 0 ? (
+          <p className="text-gray-400 text-sm">No hay pedidos en curso.</p>
+        ) : (
+          <OrderTable rows={activeOrders.map((o) => (
+            <OrderRow key={o.id} o={o} actions={
+              o.deliveryType === 'pickup' && o.status === 'assigned' ? (
+                <button
+                  onClick={() => markDelivered(o.id)}
+                  className="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-green-700 whitespace-nowrap"
+                >
+                  Entregado en local
+                </button>
+              ) : null
+            } />
+          ))} />
+        )}
+      </section>
+
+      {/* Historial */}
+      {doneOrders.length > 0 && (
+        <section>
+          <h2 className="font-semibold text-gray-700 mb-2">Historial ({doneOrders.length})</h2>
+          <OrderTable rows={doneOrders.map((o) => (
+            <OrderRow key={o.id} o={o} actions={null} />
+          ))} />
+        </section>
+      )}
     </div>
   );
 }
