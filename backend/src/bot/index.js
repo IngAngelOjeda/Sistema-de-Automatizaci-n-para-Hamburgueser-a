@@ -1,6 +1,7 @@
 import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
 import QRCode from 'qrcode';
 import P from 'pino';
+import { rm } from 'fs/promises';
 import { handleMessage } from './handlers.js';
 import { botState } from './state.js';
 
@@ -101,8 +102,10 @@ export async function initBot(io) {
       const loggedOut = statusCode === DisconnectReason.loggedOut;
 
       if (loggedOut) {
-        console.warn('[Bot] Sesión cerrada. Escaneá el QR nuevamente.');
-        emitStatus(io, 'disconnected');
+        console.warn('[Bot] Sesión cerrada. Eliminando credenciales y generando nuevo QR...');
+        const sessionPath = process.env.WA_SESSION_PATH || './wa-session';
+        await rm(sessionPath, { recursive: true, force: true });
+        setTimeout(() => initBot(io), 1000);
       } else {
         console.log('[Bot] Reconectando en 5s...');
         setTimeout(() => initBot(io), 5000);
