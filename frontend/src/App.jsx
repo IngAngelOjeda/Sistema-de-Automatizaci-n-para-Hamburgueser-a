@@ -5,7 +5,7 @@ import Admin from './pages/Admin.jsx';
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-brand-black font-body text-brand-text">
         <Navbar />
         <Routes>
           <Route path="/" element={<Navigate to="/admin" replace />} />

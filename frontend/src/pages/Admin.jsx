@@ -12,6 +12,15 @@ const CATEGORY_EMOJI = {
   extra: '➕',
 };
 
+// ── Shared styles ─────────────────────────────────────────────────────────────
+const INPUT = 'bg-brand-surface border border-brand-border text-brand-text placeholder:text-brand-muted rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand-yellow transition-colors';
+const BTN_PRIMARY = 'bg-brand-yellow text-black font-semibold px-4 py-2 rounded-lg text-sm hover:bg-brand-yellow-light transition-colors whitespace-nowrap';
+const BTN_OUTLINE = 'border border-brand-border text-brand-muted px-4 py-2 rounded-lg text-sm hover:border-brand-yellow hover:text-brand-yellow transition-colors';
+const BTN_GREEN = 'bg-green-500/10 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-xs font-semibold hover:bg-green-500/20 transition-colors whitespace-nowrap';
+const BTN_DANGER_SM = 'text-xs text-red-500 hover:text-red-400 transition-colors';
+const BTN_YELLOW_SM = 'text-xs text-brand-yellow hover:text-brand-yellow-light transition-colors';
+
+// ── PinGate ───────────────────────────────────────────────────────────────────
 function PinGate({ children }) {
   const [pin, setPin] = useState('');
   const [authed, setAuthed] = useState(false);
@@ -19,27 +28,27 @@ function PinGate({ children }) {
 
   function submit(e) {
     e.preventDefault();
-    // PIN validado contra variable de entorno expuesta opcionalmente, por defecto 1234
     const correct = import.meta.env.VITE_ADMIN_PIN || '1234';
     if (pin === correct) { setAuthed(true); } else { setError(true); setPin(''); }
   }
 
   if (authed) return children;
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <form onSubmit={submit} className="bg-white p-8 rounded-xl shadow text-center">
-        <h2 className="text-xl font-bold mb-4">🔒 Acceso Admin</h2>
+    <div className="flex items-center justify-center min-h-[70vh] px-4">
+      <form onSubmit={submit} className="bg-brand-card border border-brand-border p-8 rounded-xl w-full max-w-xs text-center">
+        <p className="font-display text-brand-yellow text-4xl tracking-widest mb-1">ADMIN</p>
+        <p className="text-brand-muted text-xs mb-6">Ingresá tu PIN de acceso</p>
         <input
           type="password"
           maxLength={4}
           value={pin}
           onChange={(e) => { setPin(e.target.value); setError(false); }}
-          className="border-2 rounded-lg px-4 py-2 text-center text-2xl tracking-widest w-32"
-          placeholder="PIN"
+          className={`${INPUT} text-center text-2xl tracking-widest w-32`}
+          placeholder="· · · ·"
           autoFocus
         />
-        {error && <p className="text-red-500 text-sm mt-2">PIN incorrecto</p>}
-        <button type="submit" className="mt-4 block w-full bg-orange-600 text-white py-2 rounded-lg font-medium hover:bg-orange-700">
+        {error && <p className="text-red-500 text-xs mt-2">PIN incorrecto</p>}
+        <button type="submit" className={`mt-5 w-full ${BTN_PRIMARY} py-2.5`}>
           Entrar
         </button>
       </form>
@@ -47,23 +56,23 @@ function PinGate({ children }) {
   );
 }
 
-// ── Tab: Pedidos — sub-components (module-level to prevent remount on re-render) ─
+// ── OrderRow & OrderTable ─────────────────────────────────────────────────────
 const TABLE_HEADERS = ['#', 'Cliente', 'Tipo', 'Dirección', 'Total', 'Estado', 'Hora', 'Acción'];
 
 function OrderRow({ o, actions }) {
   return (
-    <tr className="border-t">
-      <td className="px-4 py-3 font-mono font-semibold">{o.orderNumber}</td>
-      <td className="px-4 py-3">{o.clientName}</td>
-      <td className="px-4 py-3">{o.deliveryType === 'delivery' ? '🛵' : '🏠'}</td>
-      <td className="px-4 py-3 text-xs text-gray-500 max-w-xs truncate">
+    <tr className="border-t border-brand-border hover:bg-white/5 transition-colors">
+      <td className="px-4 py-3 font-display text-brand-yellow text-base tracking-wide">{o.orderNumber}</td>
+      <td className="px-4 py-3 text-sm font-medium">{o.clientName}</td>
+      <td className="px-4 py-3 text-lg">{o.deliveryType === 'delivery' ? '🛵' : '🏠'}</td>
+      <td className="px-4 py-3 text-xs text-brand-muted max-w-[160px] truncate">
         {o.clientAddress || (o.locationUrl
-          ? <a href={o.locationUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">Ver en Maps</a>
+          ? <a href={o.locationUrl} target="_blank" rel="noreferrer" className="text-brand-yellow underline">Ver en Maps</a>
           : '–')}
       </td>
-      <td className="px-4 py-3">{SYMBOL}{o.totalAmount?.toLocaleString('es-PY')}</td>
+      <td className="px-4 py-3 text-sm font-semibold text-brand-yellow">{SYMBOL}{o.totalAmount?.toLocaleString('es-PY')}</td>
       <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
-      <td className="px-4 py-3 text-gray-500 text-xs">{new Date(o.createdAt).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</td>
+      <td className="px-4 py-3 text-brand-muted text-xs">{new Date(o.createdAt).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' })}</td>
       <td className="px-4 py-3">{actions}</td>
     </tr>
   );
@@ -71,12 +80,12 @@ function OrderRow({ o, actions }) {
 
 function OrderTable({ rows }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm bg-white rounded-xl shadow">
-        <thead className="bg-gray-50 text-left">
+    <div className="overflow-x-auto rounded-xl border border-brand-border">
+      <table className="w-full text-sm bg-brand-surface min-w-[640px]">
+        <thead className="bg-black/40 text-left">
           <tr>
             {TABLE_HEADERS.map((h) => (
-              <th key={h} className="px-4 py-3 font-semibold">{h}</th>
+              <th key={h} className="px-4 py-3 text-xs font-semibold text-brand-muted uppercase tracking-wider">{h}</th>
             ))}
           </tr>
         </thead>
@@ -135,31 +144,32 @@ function OrdersTab() {
     o.clientName.toLowerCase().includes(search.toLowerCase());
 
   const pendingOrders = orders.filter((o) => o.status === 'pending' && matchesSearch(o));
-  const activeOrders = orders.filter((o) => ['assigned', 'delivering'].includes(o.status) && matchesSearch(o));
-  const doneOrders = orders.filter((o) => ['delivered', 'cancelled'].includes(o.status) && matchesSearch(o));
+  const activeOrders  = orders.filter((o) => ['assigned', 'delivering'].includes(o.status) && matchesSearch(o));
+  const doneOrders    = orders.filter((o) => ['delivered', 'cancelled'].includes(o.status) && matchesSearch(o));
   const activeDrivers = drivers.filter((d) => d.active);
 
   return (
     <div className="space-y-6">
       <input
-        className="border rounded-lg px-3 py-2 text-sm w-64"
+        className={`${INPUT} w-full sm:w-64`}
         placeholder="Buscar por número o cliente…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {/* Nuevos pedidos */}
       <section>
-        <h2 className="font-semibold text-gray-700 mb-2">Nuevos pedidos ({pendingOrders.length})</h2>
+        <h2 className="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-3">
+          Nuevos pedidos <span className="text-brand-yellow ml-1">({pendingOrders.length})</span>
+        </h2>
         {pendingOrders.length === 0 ? (
-          <p className="text-gray-400 text-sm">No hay pedidos pendientes.</p>
+          <p className="text-brand-muted text-sm py-6 text-center border border-brand-border rounded-xl border-dashed">Sin pedidos pendientes</p>
         ) : (
           <OrderTable rows={pendingOrders.map((o) => (
             <OrderRow key={o.id} o={o} actions={
               <div className="flex gap-2 items-center">
                 {o.deliveryType === 'delivery' && (
                   <select
-                    className="border rounded px-2 py-1 text-xs"
+                    className={`${INPUT} py-1 text-xs`}
                     value={selectedDriver[o.id] || ''}
                     onChange={(e) => setSelectedDriver((prev) => ({ ...prev, [o.id]: e.target.value }))}
                   >
@@ -169,11 +179,8 @@ function OrdersTab() {
                     ))}
                   </select>
                 )}
-                <button
-                  onClick={() => confirmAndAssign(o)}
-                  className="bg-orange-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-orange-700 whitespace-nowrap"
-                >
-                  {o.deliveryType === 'delivery' ? 'Confirmar y asignar' : 'Confirmar pedido'}
+                <button onClick={() => confirmAndAssign(o)} className={`${BTN_PRIMARY} text-xs px-3 py-1`}>
+                  {o.deliveryType === 'delivery' ? 'Confirmar y asignar' : 'Confirmar'}
                 </button>
               </div>
             } />
@@ -181,31 +188,28 @@ function OrdersTab() {
         )}
       </section>
 
-      {/* En curso */}
       <section>
-        <h2 className="font-semibold text-gray-700 mb-2">En curso ({activeOrders.length})</h2>
+        <h2 className="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-3">
+          En curso <span className="text-brand-yellow ml-1">({activeOrders.length})</span>
+        </h2>
         {activeOrders.length === 0 ? (
-          <p className="text-gray-400 text-sm">No hay pedidos en curso.</p>
+          <p className="text-brand-muted text-sm py-6 text-center border border-brand-border rounded-xl border-dashed">Sin pedidos en curso</p>
         ) : (
           <OrderTable rows={activeOrders.map((o) => (
             <OrderRow key={o.id} o={o} actions={
               o.deliveryType === 'pickup' && o.status === 'assigned' ? (
-                <button
-                  onClick={() => markDelivered(o.id)}
-                  className="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-medium hover:bg-green-700 whitespace-nowrap"
-                >
-                  Entregado en local
-                </button>
+                <button onClick={() => markDelivered(o.id)} className={BTN_GREEN}>Entregado en local</button>
               ) : null
             } />
           ))} />
         )}
       </section>
 
-      {/* Historial */}
       {doneOrders.length > 0 && (
         <section>
-          <h2 className="font-semibold text-gray-700 mb-2">Historial ({doneOrders.length})</h2>
+          <h2 className="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-3">
+            Historial <span className="ml-1">({doneOrders.length})</span>
+          </h2>
           <OrderTable rows={doneOrders.map((o) => (
             <OrderRow key={o.id} o={o} actions={null} />
           ))} />
@@ -229,6 +233,36 @@ function MenuTab() {
   }
 
   useEffect(() => { fetchProducts(); }, []);
+
+  function startEdit(p) {
+    setEditId(p.id);
+    setForm({ name: p.name, description: p.description || '', price: String(p.price), category: p.category });
+    setImageFile(null);
+    setImagePreview(p.imageUrl || null);
+  }
+
+  function cancelEdit() {
+    setEditId(null);
+    setForm({ name: '', description: '', price: '', category: 'hamburguesa' });
+    setImageFile(null);
+    setImagePreview(null);
+  }
+
+  function handleImageChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  async function removeImage(id) {
+    await fetch(`/api/menu/${id}/image`, { method: 'DELETE' });
+    setImagePreview(null);
+    setImageFile(null);
+    fetchProducts();
+  }
 
   async function save(e) {
     e.preventDefault();
@@ -280,90 +314,51 @@ function MenuTab() {
     fetchProducts();
   }
 
-  function startEdit(p) {
-    setEditId(p.id);
-    setForm({ name: p.name, description: p.description || '', price: String(p.price), category: p.category });
-    setImageFile(null);
-    setImagePreview(p.imageUrl || null);
-  }
-
-  function cancelEdit() {
-    setEditId(null);
-    setForm({ name: '', description: '', price: '', category: 'hamburguesa' });
-    setImageFile(null);
-    setImagePreview(null);
-  }
-
-  function handleImageChange(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setImagePreview(ev.target.result);
-    reader.readAsDataURL(file);
-  }
-
-  async function removeImage(id) {
-    await fetch(`/api/menu/${id}/image`, { method: 'DELETE' });
-    setImagePreview(null);
-    setImageFile(null);
-    fetchProducts();
-  }
-
   return (
     <div className="space-y-6">
-      <form onSubmit={save} className="bg-white p-4 rounded-xl shadow grid grid-cols-2 md:grid-cols-3 gap-3">
-        <input required className="border rounded-lg px-3 py-2 text-sm col-span-2 md:col-span-1" placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Descripción" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <input required type="number" className="border rounded-lg px-3 py-2 text-sm" placeholder="Precio" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-        <select className="border rounded-lg px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+      <form onSubmit={save} className="bg-brand-card border border-brand-border p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <input required className={INPUT} placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input className={INPUT} placeholder="Descripción (opcional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <input required type="number" className={INPUT} placeholder="Precio" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+        <select className={INPUT} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
+
         <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+          <div className="w-14 h-14 rounded-lg overflow-hidden bg-brand-surface border border-brand-border flex items-center justify-center flex-shrink-0">
             {imagePreview
               ? <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
-              : <span className="text-2xl">🍔</span>
+              : <span className="text-2xl">{CATEGORY_EMOJI[form.category] || '🍽️'}</span>
             }
           </div>
           <div className="flex flex-col gap-1">
-            <label className="cursor-pointer text-xs text-blue-600 hover:underline">
+            <label className={`cursor-pointer ${BTN_YELLOW_SM}`}>
               {imagePreview ? 'Cambiar imagen' : 'Subir imagen'}
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={handleImageChange}
-              />
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
             </label>
             {imagePreview && editId && (
-              <button type="button" onClick={() => removeImage(editId)} className="text-xs text-red-500 hover:underline text-left">
-                Quitar imagen
-              </button>
+              <button type="button" onClick={() => removeImage(editId)} className={BTN_DANGER_SM}>Quitar imagen</button>
             )}
             {imagePreview && !editId && (
-              <button type="button" onClick={() => { setImagePreview(null); setImageFile(null); }} className="text-xs text-red-500 hover:underline text-left">
-                Quitar
-              </button>
+              <button type="button" onClick={() => { setImagePreview(null); setImageFile(null); }} className={BTN_DANGER_SM}>Quitar</button>
             )}
           </div>
         </div>
-        <button type="submit" className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 col-span-2 md:col-span-1">
-          {editId ? 'Guardar cambios' : 'Agregar producto'}
-        </button>
-        {editId && <button type="button" onClick={cancelEdit} className="border px-4 py-2 rounded-lg text-sm">Cancelar</button>}
+
+        <div className="flex gap-2 sm:col-span-2 md:col-span-1">
+          <button type="submit" className={`${BTN_PRIMARY} flex-1`}>
+            {editId ? 'Guardar cambios' : 'Agregar producto'}
+          </button>
+          {editId && <button type="button" onClick={cancelEdit} className={BTN_OUTLINE}>Cancelar</button>}
+        </div>
       </form>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {products.map((p) => (
-          <div key={p.id} className={`bg-white rounded-xl shadow p-4 flex justify-between items-start gap-3 ${!p.available ? 'opacity-50' : ''}`}>
-            {/* Thumbnail */}
-            <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+          <div key={p.id} className={`bg-brand-card border border-brand-border rounded-xl p-4 flex items-start gap-3 transition-opacity ${!p.available ? 'opacity-40' : ''}`}>
+            <div className="w-14 h-14 rounded-lg overflow-hidden bg-brand-surface border border-brand-border flex items-center justify-center flex-shrink-0">
               {p.imageUrl
-                ? <img
-                    src={p.imageUrl}
-                    alt={p.name}
-                    className="w-full h-full object-cover"
+                ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover"
                     onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block'; }}
                   />
                 : null
@@ -372,19 +367,17 @@ function MenuTab() {
                 {CATEGORY_EMOJI[p.category] || '🍽️'}
               </span>
             </div>
-            {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="font-semibold truncate">{p.name}</p>
-              <p className="text-xs text-gray-500">{p.category} · {SYMBOL}{p.price?.toLocaleString('es-PY')}</p>
-              {p.description && <p className="text-xs text-gray-400 truncate">{p.description}</p>}
+              <p className="font-semibold text-brand-text truncate">{p.name}</p>
+              <p className="text-xs text-brand-muted">{p.category} · <span className="text-brand-yellow font-semibold">{SYMBOL}{p.price?.toLocaleString('es-PY')}</span></p>
+              {p.description && <p className="text-xs text-brand-muted truncate mt-0.5">{p.description}</p>}
             </div>
-            {/* Acciones */}
-            <div className="flex flex-col gap-1 items-end flex-shrink-0">
-              <button onClick={() => toggle(p.id)} className={`text-xs px-2 py-1 rounded-full font-medium ${p.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+              <button onClick={() => toggle(p.id)} className={`text-xs px-2.5 py-1 rounded-full font-semibold border transition-colors ${p.available ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
                 {p.available ? 'Activo' : 'Inactivo'}
               </button>
-              <button onClick={() => startEdit(p)} className="text-xs text-blue-600 hover:underline">Editar</button>
-              <button onClick={() => del(p.id)} className="text-xs text-red-600 hover:underline">Eliminar</button>
+              <button onClick={() => startEdit(p)} className={BTN_YELLOW_SM}>Editar</button>
+              <button onClick={() => del(p.id)} className={BTN_DANGER_SM}>Eliminar</button>
             </div>
           </div>
         ))}
@@ -419,19 +412,20 @@ function DriversTab() {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={add} className="bg-white p-4 rounded-xl shadow flex gap-3 flex-wrap">
-        <input required className="border rounded-lg px-3 py-2 text-sm" placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <input required className="border rounded-lg px-3 py-2 text-sm" placeholder="Teléfono (ej: 595981123456)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-        <button type="submit" className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700">Agregar</button>
+      <form onSubmit={add} className="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-wrap gap-3">
+        <input required className={`${INPUT} flex-1 min-w-[160px]`} placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input required className={`${INPUT} flex-1 min-w-[200px]`} placeholder="Teléfono (ej: 595981123456)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+        <button type="submit" className={BTN_PRIMARY}>Agregar</button>
       </form>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {drivers.map((d) => (
-          <div key={d.id} className="bg-white rounded-xl shadow p-4 flex justify-between items-center">
-            <div>
-              <p className="font-semibold">{d.name}</p>
-              <p className="text-xs text-gray-500">{d.phone}</p>
+          <div key={d.id} className="bg-brand-card border border-brand-border rounded-xl p-4 flex justify-between items-center gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold text-brand-text">{d.name}</p>
+              <p className="text-xs text-brand-muted font-mono">{d.phone}</p>
             </div>
-            <button onClick={() => toggle(d.id)} className={`text-xs px-3 py-1 rounded-full font-medium ${d.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <button onClick={() => toggle(d.id)} className={`text-xs px-3 py-1.5 rounded-full font-semibold border flex-shrink-0 transition-colors ${d.active ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
               {d.active ? 'Activo' : 'Inactivo'}
             </button>
           </div>
@@ -451,7 +445,6 @@ function StatsTab() {
       const total = orders.reduce((s, o) => s + (o.totalAmount || 0), 0);
       const delivered = orders.filter((o) => o.status === 'delivered').length;
 
-      // Producto más vendido
       const itemCount = {};
       orders.forEach((o) => o.items?.forEach((i) => {
         const name = i.product?.name || 'Desconocido';
@@ -459,7 +452,6 @@ function StatsTab() {
       }));
       const topProduct = Object.entries(itemCount).sort((a, b) => b[1] - a[1])[0];
 
-      // Hora pico
       const hourCount = {};
       orders.forEach((o) => {
         const h = new Date(o.createdAt).getHours();
@@ -471,22 +463,22 @@ function StatsTab() {
     });
   }, []);
 
-  if (!stats) return <p className="text-gray-500">Cargando estadísticas…</p>;
+  if (!stats) return <p className="text-brand-muted text-sm">Cargando estadísticas…</p>;
 
   const cards = [
     { label: 'Pedidos del día', value: stats.total },
     { label: 'Entregados', value: stats.delivered },
     { label: 'Ingresos totales', value: `${SYMBOL}${stats.revenue.toLocaleString('es-PY')}` },
-    { label: 'Producto más vendido', value: stats.topProduct ? `${stats.topProduct[0]} (${stats.topProduct[1]})` : '–' },
+    { label: 'Producto más vendido', value: stats.topProduct ? `${stats.topProduct[0]} (×${stats.topProduct[1]})` : '–' },
     { label: 'Hora pico', value: stats.peakHour ? `${stats.peakHour[0]}:00 hs` : '–' },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       {cards.map((c) => (
-        <div key={c.label} className="bg-white rounded-xl shadow p-6">
-          <p className="text-sm text-gray-500">{c.label}</p>
-          <p className="text-2xl font-bold text-orange-600 mt-1">{c.value}</p>
+        <div key={c.label} className="bg-brand-card border border-brand-border rounded-xl p-6">
+          <p className="text-xs text-brand-muted uppercase tracking-wider mb-2">{c.label}</p>
+          <p className="text-2xl font-bold text-brand-yellow font-display tracking-wide">{c.value}</p>
         </div>
       ))}
     </div>
@@ -499,7 +491,6 @@ function WhatsAppTab() {
   const [qr, setQr] = useState(null);
 
   useEffect(() => {
-    // Cargar estado inicial vía REST por si el bot ya está conectado
     fetch('/api/bot/status')
       .then((r) => r.json())
       .then(({ status, qr: q }) => { setBotStatus(status); setQr(q); });
@@ -513,46 +504,46 @@ function WhatsAppTab() {
   }, []);
 
   const statusConfig = {
-    connected:    { color: 'bg-green-100 text-green-700',  icon: '✅', label: 'WhatsApp conectado' },
-    qr:           { color: 'bg-yellow-100 text-yellow-700', icon: '📱', label: 'Esperando escaneo' },
-    connecting:   { color: 'bg-blue-100 text-blue-700',    icon: '⏳', label: 'Conectando…' },
-    disconnected: { color: 'bg-red-100 text-red-700',      icon: '❌', label: 'Desconectado' },
+    connected:    { color: 'bg-green-500/10 text-green-400 border border-green-500/30',    icon: '🟢', label: 'WhatsApp conectado' },
+    qr:           { color: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30', icon: '📱', label: 'Esperando escaneo' },
+    connecting:   { color: 'bg-blue-500/10 text-blue-400 border border-blue-500/30',        icon: '⏳', label: 'Conectando…' },
+    disconnected: { color: 'bg-red-500/10 text-red-400 border border-red-500/30',           icon: '❌', label: 'Desconectado' },
   };
   const cfg = statusConfig[botStatus] || statusConfig.connecting;
 
   return (
     <div className="flex flex-col items-center gap-6 py-6">
-      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm ${cfg.color}`}>
+      <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold ${cfg.color}`}>
         <span>{cfg.icon}</span>
         <span>{cfg.label}</span>
       </div>
 
       {botStatus === 'qr' && qr && (
-        <div className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center gap-3">
-          <p className="text-sm text-gray-500">Abrí WhatsApp → Dispositivos vinculados → Vincular dispositivo</p>
-          <img src={qr} alt="QR WhatsApp" className="w-64 h-64 rounded-lg" />
+        <div className="bg-brand-card border border-brand-border rounded-2xl p-6 flex flex-col items-center gap-4 w-full max-w-xs">
+          <p className="text-xs text-brand-muted text-center">
+            WhatsApp → Dispositivos vinculados → Vincular dispositivo
+          </p>
+          <img src={qr} alt="QR WhatsApp" className="w-56 h-56 rounded-xl" />
         </div>
       )}
 
       {botStatus === 'connected' && (
-        <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-500">
-          <p className="text-4xl mb-3">🟢</p>
-          <p className="font-semibold text-gray-700">Bot activo y recibiendo mensajes</p>
-          <p className="text-sm mt-1">Para desvincular, usá WhatsApp en tu celular</p>
+        <div className="bg-brand-card border border-brand-border rounded-2xl p-8 text-center max-w-sm w-full">
+          <p className="font-display text-brand-yellow text-3xl tracking-wide mb-2">ACTIVO</p>
+          <p className="text-brand-muted text-sm">Bot recibiendo mensajes de WhatsApp</p>
+          <p className="text-xs text-brand-muted mt-2">Para desvincular, usá WhatsApp en tu celular</p>
         </div>
       )}
 
       {botStatus === 'connecting' && (
-        <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-400">
-          <p className="text-4xl mb-3 animate-pulse">⏳</p>
-          <p>Iniciando conexión con WhatsApp…</p>
+        <div className="bg-brand-card border border-brand-border rounded-2xl p-8 text-center max-w-sm w-full">
+          <p className="text-brand-muted animate-pulse text-sm">Iniciando conexión con WhatsApp…</p>
         </div>
       )}
 
       {botStatus === 'disconnected' && (
-        <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-400">
-          <p className="text-4xl mb-3">📵</p>
-          <p>Bot desconectado. Reiniciá el servidor para reconectar.</p>
+        <div className="bg-brand-card border border-brand-border rounded-2xl p-8 text-center max-w-sm w-full">
+          <p className="text-red-400 text-sm">Bot desconectado. Reiniciá el servidor para reconectar.</p>
         </div>
       )}
     </div>
@@ -565,19 +556,25 @@ export default function Admin() {
 
   return (
     <PinGate>
-      <div className="max-w-5xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4">⚙️ Panel Admin</h1>
-        <div className="flex gap-2 mb-6 border-b">
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <h1 className="font-display text-brand-yellow text-4xl tracking-wide mb-5">PANEL ADMIN</h1>
+
+        <div className="flex border-b border-brand-border mb-6 overflow-x-auto">
           {TABS.map((t, i) => (
             <button
               key={t}
               onClick={() => setTab(i)}
-              className={`px-4 py-2 font-medium text-sm border-b-2 transition ${tab === i ? 'border-orange-600 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              className={`px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
+                tab === i
+                  ? 'border-brand-yellow text-brand-yellow'
+                  : 'border-transparent text-brand-muted hover:text-brand-text'
+              }`}
             >
               {t}
             </button>
           ))}
         </div>
+
         {tab === 0 && <OrdersTab />}
         {tab === 1 && <MenuTab />}
         {tab === 2 && <DriversTab />}
