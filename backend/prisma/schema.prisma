@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String?
+  price       Float
+  category    String
+  imageUrl    String?
+  available   Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  orderItems  OrderItem[]
+  image       ProductImage?
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  orderNumber   String      @unique
+  clientName    String
+  clientPhone   String
+  clientAddress String?
+  locationLat   Float?
+  locationLng   Float?
+  locationUrl   String?
+  deliveryType  String
+  status        String      @default("pending")
+  totalAmount   Float
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  delivery      Delivery?
+  items         OrderItem[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int
+  unitPrice Float
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Driver {
+  id         Int        @id @default(autoincrement())
+  name       String
+  phone      String     @unique
+  active     Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  deliveries Delivery[]
+}
+
+model Delivery {
+  id           Int       @id @default(autoincrement())
+  orderId      Int       @unique
+  driverId     Int?
+  estimatedMin Int?
+  deliveredAt  DateTime?
+  driver       Driver?   @relation(fields: [driverId], references: [id])
+  order        Order     @relation(fields: [orderId], references: [id])
+}
+
+model ProductImage {
+  id        Int     @id @default(autoincrement())
+  productId Int     @unique
+  data      String  // base64 del archivo
+  mimeType  String  // "image/jpeg" | "image/png" | "image/webp"
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
