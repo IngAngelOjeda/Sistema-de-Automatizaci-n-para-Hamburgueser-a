@@ -124,6 +124,8 @@ router.get('/:id/image', async (req, res) => {
 router.delete('/:id/image', async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const existing = await prisma.productImage.findUnique({ where: { productId: id } });
+    if (!existing) return res.status(404).json({ error: 'Image not found' });
     await prisma.productImage.delete({ where: { productId: id } });
     await prisma.product.update({ where: { id }, data: { imageUrl: null } });
     res.json({ ok: true });
