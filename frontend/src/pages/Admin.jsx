@@ -359,9 +359,17 @@ function MenuTab() {
             {/* Thumbnail */}
             <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
               {p.imageUrl
-                ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
-                : <span className="text-2xl">{CATEGORY_EMOJI[p.category] || '🍽️'}</span>
+                ? <img
+                    src={p.imageUrl}
+                    alt={p.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block'; }}
+                  />
+                : null
               }
+              <span className="text-2xl" style={{ display: p.imageUrl ? 'none' : 'block' }}>
+                {CATEGORY_EMOJI[p.category] || '🍽️'}
+              </span>
             </div>
             {/* Info */}
             <div className="flex-1 min-w-0">
