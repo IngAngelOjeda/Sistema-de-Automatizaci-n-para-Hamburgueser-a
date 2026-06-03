@@ -212,8 +212,10 @@ function OrdersTab() {
 // ── Tab: Menú ─────────────────────────────────────────────────────────────────
 function MenuTab() {
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ name: '', description: '', price: '', category: 'hamburguesa', imageUrl: '' });
+  const [form, setForm] = useState({ name: '', description: '', price: '', category: 'hamburguesa' });
   const [editId, setEditId] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   async function fetchProducts() {
     const data = await fetch('/api/menu').then((r) => r.json());
@@ -224,14 +226,32 @@ function MenuTab() {
 
   async function save(e) {
     e.preventDefault();
-    const body = { ...form, price: Number(form.price) };
+    const body = { name: form.name, description: form.description, price: Number(form.price), category: form.category };
+    let saved;
     if (editId) {
-      await fetch(`/api/menu/${editId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      setEditId(null);
+      saved = await fetch(`/api/menu/${editId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((r) => r.json());
     } else {
-      await fetch('/api/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      saved = await fetch('/api/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((r) => r.json());
     }
-    setForm({ name: '', description: '', price: '', category: 'hamburguesa', imageUrl: '' });
+
+    if (imageFile) {
+      const fd = new FormData();
+      fd.append('image', imageFile);
+      await fetch(`/api/menu/${saved.id}/image`, { method: 'POST', body: fd });
+    }
+
+    setEditId(null);
+    setForm({ name: '', description: '', price: '', category: 'hamburguesa' });
+    setImageFile(null);
+    setImagePreview(null);
     fetchProducts();
   }
 
@@ -248,7 +268,32 @@ function MenuTab() {
 
   function startEdit(p) {
     setEditId(p.id);
-    setForm({ name: p.name, description: p.description || '', price: String(p.price), category: p.category, imageUrl: p.imageUrl || '' });
+    setForm({ name: p.name, description: p.description || '', price: String(p.price), category: p.category });
+    setImageFile(null);
+    setImagePreview(p.imageUrl || null);
+  }
+
+  function cancelEdit() {
+    setEditId(null);
+    setForm({ name: '', description: '', price: '', category: 'hamburguesa' });
+    setImageFile(null);
+    setImagePreview(null);
+  }
+
+  function handleImageChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  async function removeImage(id) {
+    await fetch(`/api/menu/${id}/image`, { method: 'DELETE' });
+    setImagePreview(null);
+    setImageFile(null);
+    fetchProducts();
   }
 
   return (
@@ -260,11 +305,39 @@ function MenuTab() {
         <select className="border rounded-lg px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        <input className="border rounded-lg px-3 py-2 text-sm" placeholder="URL imagen (opcional)" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+            {imagePreview
+              ? <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
+              : <span className="text-2xl">🍔</span>
+            }
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="cursor-pointer text-xs text-blue-600 hover:underline">
+              {imagePreview ? 'Cambiar imagen' : 'Subir imagen'}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </label>
+            {imagePreview && editId && (
+              <button type="button" onClick={() => removeImage(editId)} className="text-xs text-red-500 hover:underline text-left">
+                Quitar imagen
+              </button>
+            )}
+            {imagePreview && !editId && (
+              <button type="button" onClick={() => { setImagePreview(null); setImageFile(null); }} className="text-xs text-red-500 hover:underline text-left">
+                Quitar
+              </button>
+            )}
+          </div>
+        </div>
         <button type="submit" className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 col-span-2 md:col-span-1">
           {editId ? 'Guardar cambios' : 'Agregar producto'}
         </button>
-        {editId && <button type="button" onClick={() => { setEditId(null); setForm({ name: '', description: '', price: '', category: 'hamburguesa', imageUrl: '' }); }} className="border px-4 py-2 rounded-lg text-sm">Cancelar</button>}
+        {editId && <button type="button" onClick={cancelEdit} className="border px-4 py-2 rounded-lg text-sm">Cancelar</button>}
       </form>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
