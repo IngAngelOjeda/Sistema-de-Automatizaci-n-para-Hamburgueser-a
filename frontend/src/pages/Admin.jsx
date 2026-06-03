@@ -228,24 +228,31 @@ function MenuTab() {
     e.preventDefault();
     const body = { name: form.name, description: form.description, price: Number(form.price), category: form.category };
     let saved;
-    if (editId) {
-      saved = await fetch(`/api/menu/${editId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }).then((r) => r.json());
-    } else {
-      saved = await fetch('/api/menu', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }).then((r) => r.json());
-    }
+    try {
+      if (editId) {
+        saved = await fetch(`/api/menu/${editId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }).then((r) => r.json());
+      } else {
+        saved = await fetch('/api/menu', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }).then((r) => r.json());
+      }
 
-    if (imageFile) {
-      const fd = new FormData();
-      fd.append('image', imageFile);
-      await fetch(`/api/menu/${saved.id}/image`, { method: 'POST', body: fd });
+      if (!saved.id) throw new Error(saved.error || 'Error al guardar producto');
+
+      if (imageFile) {
+        const fd = new FormData();
+        fd.append('image', imageFile);
+        await fetch(`/api/menu/${saved.id}/image`, { method: 'POST', body: fd });
+      }
+    } catch (err) {
+      alert(`Error al guardar: ${err.message}`);
+      return;
     }
 
     setEditId(null);
