@@ -254,7 +254,8 @@ function MenuTab() {
       if (imageFile) {
         const fd = new FormData();
         fd.append('image', imageFile);
-        await fetch(`/api/menu/${saved.id}/image`, { method: 'POST', body: fd });
+        const imgRes = await fetch(`/api/menu/${saved.id}/image`, { method: 'POST', body: fd }).then((r) => r.json());
+        if (!imgRes.id) throw new Error(imgRes.error || 'Error al subir la imagen');
       }
     } catch (err) {
       alert(`Error al guardar: ${err.message}`);
