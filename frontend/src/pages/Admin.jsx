@@ -5,6 +5,12 @@ import StatusBadge from '../components/StatusBadge.jsx';
 const TABS = ['Pedidos', 'Menú', 'Repartidores', 'Estadísticas', 'WhatsApp'];
 const CATEGORIES = ['hamburguesa', 'lomito', 'gaseosa', 'extra'];
 const SYMBOL = '₲';
+const CATEGORY_EMOJI = {
+  hamburguesa: '🍔',
+  lomito: '🥩',
+  gaseosa: '🥤',
+  extra: '➕',
+};
 
 function PinGate({ children }) {
   const [pin, setPin] = useState('');
@@ -349,13 +355,22 @@ function MenuTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {products.map((p) => (
-          <div key={p.id} className={`bg-white rounded-xl shadow p-4 flex justify-between items-start ${!p.available ? 'opacity-50' : ''}`}>
-            <div>
-              <p className="font-semibold">{p.name}</p>
-              <p className="text-xs text-gray-500">{p.category} · {SYMBOL}{p.price?.toLocaleString('es-PY')}</p>
-              {p.description && <p className="text-xs text-gray-400">{p.description}</p>}
+          <div key={p.id} className={`bg-white rounded-xl shadow p-4 flex justify-between items-start gap-3 ${!p.available ? 'opacity-50' : ''}`}>
+            {/* Thumbnail */}
+            <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+              {p.imageUrl
+                ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                : <span className="text-2xl">{CATEGORY_EMOJI[p.category] || '🍽️'}</span>
+              }
             </div>
-            <div className="flex flex-col gap-1 items-end ml-2">
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold truncate">{p.name}</p>
+              <p className="text-xs text-gray-500">{p.category} · {SYMBOL}{p.price?.toLocaleString('es-PY')}</p>
+              {p.description && <p className="text-xs text-gray-400 truncate">{p.description}</p>}
+            </div>
+            {/* Acciones */}
+            <div className="flex flex-col gap-1 items-end flex-shrink-0">
               <button onClick={() => toggle(p.id)} className={`text-xs px-2 py-1 rounded-full font-medium ${p.available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                 {p.available ? 'Activo' : 'Inactivo'}
               </button>
