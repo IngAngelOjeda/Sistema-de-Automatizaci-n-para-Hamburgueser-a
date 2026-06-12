@@ -63,7 +63,7 @@ export function printTicket(order) {
 <meta charset="utf-8">
 <style>
   @page { size: 58mm auto; margin: 2mm 3mm; }
-  body { font-family: 'Courier New', Courier, monospace; font-size: 11px; width: 52mm; margin: 0; padding: 0; white-space: pre; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: bold; width: 52mm; margin: 0; padding: 0; white-space: pre; }
 </style>
 </head>
 <body>${lines.join('\n')}</body>
