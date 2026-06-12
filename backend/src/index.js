@@ -6,6 +6,7 @@ import { initSocket } from './socket/index.js';
 import ordersRouter from './routes/orders.js';
 import menuRouter from './routes/menu.js';
 import deliveryRouter from './routes/delivery.js';
+import blockedRouter from './routes/blocked.js';
 import { initBot } from './bot/index.js';
 import { botState } from './bot/state.js';
 
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use('/api/orders', ordersRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/delivery', deliveryRouter);
+app.use('/api/blocked', blockedRouter);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/api/bot/status', (_req, res) => res.json({ status: botState.status, qr: botState.qr }));
