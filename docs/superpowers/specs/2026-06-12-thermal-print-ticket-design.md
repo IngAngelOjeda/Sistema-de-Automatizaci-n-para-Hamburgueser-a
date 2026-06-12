@@ -13,6 +13,7 @@ El sistema de hamburguesería tiene un panel admin (React/Vite) donde los operad
 - **Disparador:** Botón "Imprimir" en la columna de acciones de cada fila de pedido en el panel admin
 - **Sin auto-print silencioso:** El diálogo del navegador es aceptable para el operador
 - **Sin cambios de backend:** Todo el formateo del ticket ocurre en el frontend
+- **Oculto en móvil:** El botón no se renderiza en pantallas < 768px — la ticketera Bluetooth está pareada con la PC, no con el celular; mostrarlo en móvil solo generaría confusión
 
 ## Archivos
 
@@ -28,6 +29,7 @@ Función exportada `printTicket(order)` que:
 
 - En `OrdersTab`, agregar el botón "Imprimir" en el prop `actions` de cada `OrderRow` para las secciones "Nuevos pedidos", "En curso" e "Historial"
 - El botón usa el estilo `BTN_OUTLINE` existente
+- El botón se envuelve en `<span className="hidden md:inline">` para ocultarse en pantallas móviles (< 768px), ya que la ticketera solo está disponible en la PC
 
 ## Formato del ticket (58mm)
 
