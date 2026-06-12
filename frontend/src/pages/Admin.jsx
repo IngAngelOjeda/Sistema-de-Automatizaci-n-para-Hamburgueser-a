@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import StatusBadge from '../components/StatusBadge.jsx';
+import { printTicket } from '../utils/printTicket.js';
 
 const TABS = ['Pedidos', 'Menú', 'Repartidores', 'Estadísticas', 'WhatsApp'];
 const CATEGORIES = ['hamburguesa', 'lomito', 'gaseosa', 'extra'];
@@ -167,6 +168,9 @@ function OrdersTab() {
           <OrderTable rows={pendingOrders.map((o) => (
             <OrderRow key={o.id} o={o} actions={
               <div className="flex gap-2 items-center">
+                <span className="hidden md:inline">
+                  <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
+                </span>
                 {o.deliveryType === 'delivery' && (
                   <select
                     className={`${INPUT} py-1 text-xs`}
@@ -197,9 +201,14 @@ function OrdersTab() {
         ) : (
           <OrderTable rows={activeOrders.map((o) => (
             <OrderRow key={o.id} o={o} actions={
-              o.deliveryType === 'pickup' && o.status === 'assigned' ? (
-                <button onClick={() => markDelivered(o.id)} className={BTN_GREEN}>Entregado en local</button>
-              ) : null
+              <div className="flex gap-2 items-center">
+                <span className="hidden md:inline">
+                  <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
+                </span>
+                {o.deliveryType === 'pickup' && o.status === 'assigned' ? (
+                  <button onClick={() => markDelivered(o.id)} className={BTN_GREEN}>Entregado en local</button>
+                ) : null}
+              </div>
             } />
           ))} />
         )}
@@ -211,7 +220,11 @@ function OrdersTab() {
             Historial <span className="ml-1">({doneOrders.length})</span>
           </h2>
           <OrderTable rows={doneOrders.map((o) => (
-            <OrderRow key={o.id} o={o} actions={null} />
+            <OrderRow key={o.id} o={o} actions={
+              <span className="hidden md:inline">
+                <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
+              </span>
+            } />
           ))} />
         </section>
       )}
