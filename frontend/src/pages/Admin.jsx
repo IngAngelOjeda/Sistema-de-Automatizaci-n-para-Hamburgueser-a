@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import StatusBadge from '../components/StatusBadge.jsx';
 import { printTicket } from '../utils/printTicket.js';
 
-const TABS = ['Pedidos', 'Menú', 'Repartidores', 'Estadísticas', 'WhatsApp'];
+const TABS = ['Pedidos', 'Menú', 'Repartidores', 'Estadísticas', 'WhatsApp', 'Bloqueados'];
 const CATEGORIES = ['hamburguesa', 'lomito', 'gaseosa', 'extra'];
 const SYMBOL = '₲';
 const CATEGORY_EMOJI = {
@@ -563,6 +563,80 @@ function WhatsAppTab() {
   );
 }
 
+// ── Tab: Bloqueados ───────────────────────────────────────────────────────────
+function BlockedTab() {
+  const [blocked, setBlocked] = useState([]);
+  const [form, setForm] = useState({ phone: '', note: '' });
+  const [error, setError] = useState('');
+
+  async function fetchBlocked() {
+    const data = await fetch('/api/blocked').then((r) => r.json());
+    setBlocked(data);
+  }
+
+  useEffect(() => { fetchBlocked(); }, []);
+
+  async function add(e) {
+    e.preventDefault();
+    setError('');
+    const res = await fetch('/api/blocked', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: form.phone.trim(), note: form.note.trim() || undefined }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error || 'Error al bloquear'); return; }
+    setForm({ phone: '', note: '' });
+    fetchBlocked();
+  }
+
+  async function remove(id) {
+    await fetch(`/api/blocked/${id}`, { method: 'DELETE' });
+    fetchBlocked();
+  }
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={add} className="bg-brand-card border border-brand-border p-4 rounded-xl flex flex-wrap gap-3">
+        <input
+          required
+          className={`${INPUT} flex-1 min-w-[200px]`}
+          placeholder="Número (ej: 595981123456)"
+          value={form.phone}
+          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+        />
+        <input
+          className={`${INPUT} flex-1 min-w-[160px]`}
+          placeholder="Nota (opcional)"
+          value={form.note}
+          onChange={(e) => setForm({ ...form, note: e.target.value })}
+        />
+        <button type="submit" className={BTN_PRIMARY}>Bloquear</button>
+      </form>
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {blocked.length === 0 ? (
+          <p className="text-brand-muted text-sm py-6 text-center border border-brand-border rounded-xl border-dashed col-span-2">
+            Sin números bloqueados
+          </p>
+        ) : blocked.map((b) => (
+          <div key={b.id} className="bg-brand-card border border-brand-border rounded-xl p-4 flex justify-between items-center gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold text-brand-text font-mono">{b.phone}</p>
+              {b.note && <p className="text-xs text-brand-muted">{b.note}</p>}
+              <p className="text-xs text-brand-muted">{new Date(b.createdAt).toLocaleDateString('es-PY')}</p>
+            </div>
+            <button onClick={() => remove(b.id)} className={`${BTN_DANGER_SM} flex-shrink-0`}>
+              Desbloquear
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Admin ────────────────────────────────────────────────────────────────
 export default function Admin() {
   const [tab, setTab] = useState(0);
@@ -593,6 +667,7 @@ export default function Admin() {
         {tab === 2 && <DriversTab />}
         {tab === 3 && <StatsTab />}
         {tab === 4 && <WhatsAppTab />}
+        {tab === 5 && <BlockedTab />}
       </div>
     </PinGate>
   );
