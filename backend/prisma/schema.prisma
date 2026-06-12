@@ -75,3 +75,10 @@ model ProductImage {
   mimeType  String  // "image/jpeg" | "image/png" | "image/webp"
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
+
+model BlockedPhone {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  note      String?
+  createdAt DateTime @default(now())
+}
