@@ -89,6 +89,11 @@ async function isRegisteredDriver(phone) {
   return driver || null;
 }
 
+async function isBlockedPhone(phone) {
+  const blocked = await prisma.blockedPhone.findUnique({ where: { phone } });
+  return !!blocked;
+}
+
 async function getActiveOrderForDriver(phone) {
   const normalized = normalizePhone(phone);
   const driver = await prisma.driver.findFirst({ where: { phone: normalized } });
@@ -197,20 +202,28 @@ export async function handleMessage(client, message, io) {
     return;
   }
 
+  // Verificar lista negra en DB
+  if (await isBlockedPhone(normalizePhone(phone))) {
+    console.log(`[Bot] ⛔ Número en lista negra: ${phone}`);
+    return;
+  }
+
   console.log(`[Bot] 2️⃣ Pasó validaciones iniciales`);
   const body = normalize(message.body || '');
 
   // Detectar si es repartidor respondiendo "tomado"
   const driver = await isRegisteredDriver(phone);
-  if (driver && body.includes('tomado')) {
-    const order = await getActiveOrderForDriver(phone);
-    if (order) {
-      await prisma.order.update({ where: { id: order.id }, data: { status: 'delivering' } });
-      io.emit('order_updated', { ...order, status: 'delivering' });
-      await notifyClientOrderOnTheWay(client, order);
-      await client.sendText(phone, `✅ Perfecto ${driver.name}, ¡buen viaje! El cliente fue notificado.`);
-    } else {
-      await client.sendText(phone, `⚠️ No encontré un pedido listo para vos. Contactá al administrador.`);
+  if (driver) {
+    if (body.includes('tomado')) {
+      const order = await getActiveOrderForDriver(phone);
+      if (order) {
+        await prisma.order.update({ where: { id: order.id }, data: { status: 'delivering' } });
+        io.emit('order_updated', { ...order, status: 'delivering' });
+        await notifyClientOrderOnTheWay(client, order);
+        await client.sendText(phone, `✅ Perfecto ${driver.name}, ¡buen viaje! El cliente fue notificado.`);
+      } else {
+        await client.sendText(phone, `⚠️ No encontré un pedido listo para vos. Contactá al administrador.`);
+      }
     }
     return;
   }
