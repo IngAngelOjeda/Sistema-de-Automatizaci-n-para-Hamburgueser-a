@@ -13,7 +13,7 @@ function emitStatus(io, status, qr = null) {
 
 // Convierte el mensaje crudo de Baileys a la estructura interna que usa handlers.js
 function normalizeMessage(raw) {
-  const from = raw.key.remoteJid;
+  const from = resolveJid(raw.key.remoteJid);
   const fromMe = raw.key.fromMe || false;
   const msg = raw.message;
 
@@ -62,6 +62,16 @@ function normalizeMessage(raw) {
   };
 }
 
+// Mapa persistente de LID → JID real (e.g. "21741225136297@lid" → "595981123456@s.whatsapp.net")
+const lidMap = new Map();
+
+function resolveJid(jid) {
+  if (jid?.endsWith('@lid') && lidMap.has(jid)) {
+    return lidMap.get(jid);
+  }
+  return jid;
+}
+
 export async function initBot(io) {
   emitStatus(io, 'connecting');
 
@@ -83,6 +93,15 @@ export async function initBot(io) {
   botState.client = client;
 
   sock.ev.on('creds.update', saveCreds);
+
+  // Construir el mapa LID → JID real a medida que llegan contactos
+  sock.ev.on('contacts.upsert', (contacts) => {
+    for (const c of contacts) {
+      if (c.id && c.lid) {
+        lidMap.set(c.lid, c.id);
+      }
+    }
+  });
 
   sock.ev.on('connection.update', async (update) => {
     try {

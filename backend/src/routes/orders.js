@@ -131,10 +131,12 @@ router.delete('/:id', async (req, res) => {
 });
 
 async function generateOrderNumber(offset = 0) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const count = await prisma.order.count({ where: { createdAt: { gte: today } } });
-  return `ORD-${String(count + 1 + offset).padStart(3, '0')}`;
+  const lastOrder = await prisma.order.findFirst({
+    orderBy: { id: 'desc' },
+    select: { orderNumber: true },
+  });
+  const lastNum = lastOrder ? (parseInt(lastOrder.orderNumber.replace('ORD-', '')) || 0) : 0;
+  return `ORD-${String(lastNum + 1 + offset).padStart(3, '0')}`;
 }
 
 export default router;

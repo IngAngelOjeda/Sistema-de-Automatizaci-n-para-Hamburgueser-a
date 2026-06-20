@@ -14,6 +14,7 @@ const timeouts = new Map();
 const STATES = {
   IDLE: 'IDLE',
   MENU_SENT: 'MENU_SENT',
+  WAITING_PHONE: 'WAITING_PHONE',
   CONFIRM_DELIVERY_TYPE: 'CONFIRM_DELIVERY_TYPE',
   WAITING_LOCATION: 'WAITING_LOCATION',
   ORDERING: 'ORDERING',
@@ -35,6 +36,7 @@ function normalize(text) {
 function normalizePhone(phone) {
   return phone.replace(/@s\.whatsapp\.net$/, '').replace(/@c\.us$/, '').replace(/@lid$/, '');
 }
+
 
 function isBlockedNumber(phone) {
   return BLOCKED_NUMBERS.has(normalizePhone(phone));
@@ -128,7 +130,7 @@ function buildOrderSummary(session) {
   if (deliveryType === 'delivery') {
     text += `\n📍 Dirección: ${clientAddress || locationUrl || 'Por coordenadas GPS'}`;
   }
-  text += `\n\n💰 *Total: ${symbol}${total.toLocaleString('es-PY')}*\n\n¿Confirmás? Respondé *SÍ* para confirmar ✅`;
+  text += `\n\n💰 *Total: ${symbol}${total.toLocaleString('es-PY')}*`;
   return { text, total };
 }
 
@@ -139,12 +141,10 @@ function parseOrderText(text, products) {
 
   for (const line of lines) {
     const clean = normalize(line).replace(/[^a-záéíóúüñ0-9 ]/g, ' ');
-    // Buscar número al inicio
     const numMatch = clean.match(/^(\d+)\s+(.+)/) || clean.match(/^(.+)\s+x?\s*(\d+)$/);
     let qty = 1;
     let productText = clean;
     if (numMatch) {
-      // "2 hamburguesa" o "hamburguesa x2"
       if (!isNaN(numMatch[1])) {
         qty = parseInt(numMatch[1]);
         productText = numMatch[2];
@@ -154,13 +154,20 @@ function parseOrderText(text, products) {
       }
     }
 
-    // Buscar producto por nombre aproximado
-    const matched = products.find((p) =>
-      normalize(p.name).includes(productText.trim()) ||
-      productText.trim().includes(normalize(p.name).split(' ')[0])
-    );
-    if (matched) {
-      result.push({ productId: matched.id, name: matched.name, quantity: qty, unitPrice: matched.price });
+    // Puntuar cada producto por cuántas palabras del nombre coinciden con el texto del usuario
+    const userWords = productText.trim().split(/\s+/);
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const p of products) {
+      const productWords = normalize(p.name).split(/\s+/);
+      const score = productWords.filter((w) => userWords.includes(w)).length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = p;
+      }
+    }
+    if (bestMatch && bestScore > 0) {
+      result.push({ productId: bestMatch.id, name: bestMatch.name, quantity: qty, unitPrice: bestMatch.price });
     }
   }
   return result;
@@ -194,7 +201,8 @@ export async function handleMessage(client, message, io) {
   }
 
   const phone = message.from;
-  console.log(`[Bot] 1️⃣ Mensaje de ${phone}: "${message.body}"`);
+  const realPhone = normalizePhone(phone);
+  console.log(`[Bot] 1️⃣ Mensaje de ${phone} (tel: ${realPhone}): "${message.body}"`);
 
   // Verificar si el número está bloqueado
   if (isBlockedNumber(phone)) {
@@ -203,7 +211,7 @@ export async function handleMessage(client, message, io) {
   }
 
   // Verificar lista negra en DB
-  if (await isBlockedPhone(normalizePhone(phone))) {
+  if (await isBlockedPhone(realPhone)) {
     console.log(`[Bot] ⛔ Número en lista negra: ${phone}`);
     return;
   }
@@ -231,7 +239,7 @@ export async function handleMessage(client, message, io) {
   // Verificar si el cliente ya tiene un pedido activo (anti-spam)
   const activeOrder = await prisma.order.findFirst({
     where: {
-      clientPhone: normalizePhone(phone),
+      clientPhone: realPhone,
       status: { in: ['pending', 'assigned', 'delivering'] },
     },
   });
@@ -250,7 +258,7 @@ export async function handleMessage(client, message, io) {
       );
       return;
     }
-    const businessName = process.env.BUSINESS_NAME || 'Burger Casa';
+    const businessName = process.env.BUSINESS_NAME || 'Lomi Liz';
     await client.sendText(
       phone,
       `¡Hola! 👋 Bienvenido a *${businessName}* 🍔\n¿Qué deseas hacer?\n\n1️⃣ Ver el menú\n2️⃣ Hacer un pedido`
@@ -349,15 +357,27 @@ export async function handleMessage(client, message, io) {
     const updatedSession = { ...session.data, items };
     const { text, total } = buildOrderSummary({ data: updatedSession });
     await client.sendText(phone, text);
-    setSession(phone, STATES.CONFIRM_ORDER, { ...updatedSession, total });
+    await client.sendText(phone, `📱 Para confirmar, escribí tu *número de teléfono* (ej: 0981 123 456):`);
+    setSession(phone, STATES.WAITING_PHONE, { ...updatedSession, total });
+    return;
+  }
+
+  if (session.state === STATES.WAITING_PHONE) {
+    const digits = body.replace(/\D/g, '');
+    if (digits.length < 7 || digits.length > 15) {
+      await client.sendText(phone, `⚠️ Eso no parece un número válido. Escribí tu teléfono, por ejemplo: *0981 123 456*`);
+      return;
+    }
+    await client.sendText(phone, `✅ ¿Confirmás tu pedido? Respondé *SÍ* para confirmar ✅`);
+    setSession(phone, STATES.CONFIRM_ORDER, { ...session.data, clientPhone: digits });
     return;
   }
 
   if (session.state === STATES.CONFIRM_ORDER) {
     if (body.includes('si') || body.includes('sí') || body.includes('confirmo') || body.includes('ok')) {
-      const { deliveryType, clientAddress, locationLat, locationLng, locationUrl, items, total } = session.data;
+      const { deliveryType, clientAddress, locationLat, locationLng, locationUrl, items, total, clientPhone: sessionPhone } = session.data;
 
-      const clientPhone = normalizePhone(phone);
+      const clientPhone = sessionPhone || realPhone;
       const clientName = message.sender?.pushname || message.sender?.name || clientPhone;
 
       const orderRes = await fetch(`http://localhost:${process.env.PORT || 3000}/api/orders`, {
