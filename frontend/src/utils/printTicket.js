@@ -1,5 +1,5 @@
 export function printTicket(order) {
-  const storeName = (import.meta.env.VITE_STORE_NAME || 'MI LOCAL').toUpperCase();
+  const storeName = (import.meta.env.VITE_STORE_NAME || 'LOMI LIZ').toUpperCase();
   const date = new Date(order.createdAt);
   const dateStr = date.toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const timeStr = date.toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit' });

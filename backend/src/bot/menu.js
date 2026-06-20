@@ -24,7 +24,7 @@ export async function getMenuText() {
   }, {});
 
   const symbol = process.env.CURRENCY_SYMBOL || '₲';
-  let text = `📋 *Menú ${process.env.BUSINESS_NAME || 'Burger Casa'}*\n\n`;
+  let text = `📋 *Menú ${process.env.BUSINESS_NAME || 'Lomi Liz'}*\n\n`;
 
   for (const [cat, items] of Object.entries(byCategory)) {
     text += `*${CATEGORY_LABELS[cat] || cat}*\n`;
