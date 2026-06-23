@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import StatusBadge from '../components/StatusBadge.jsx';
 import { printTicket } from '../utils/printTicket.js';
@@ -102,6 +102,9 @@ function OrdersTab() {
   const [drivers, setDrivers] = useState([]);
   const [selectedDriver, setSelectedDriver] = useState({});
   const [search, setSearch] = useState('');
+  const [editOrderId, setEditOrderId] = useState(null);
+  const [editForm, setEditForm]       = useState(null);
+  const [menuProducts, setMenuProducts] = useState([]);
 
   async function fetchOrders() {
     const data = await fetch('/api/orders').then((r) => r.json());
@@ -111,6 +114,7 @@ function OrdersTab() {
   useEffect(() => {
     fetchOrders();
     fetch('/api/delivery/drivers').then((r) => r.json()).then(setDrivers);
+    fetch('/api/menu').then((r) => r.json()).then((data) => setMenuProducts(data.filter((p) => p.available)));
   }, []);
 
   useEffect(() => {
@@ -137,6 +141,198 @@ function OrdersTab() {
   async function markDelivered(orderId) {
     await fetch(`/api/delivery/${orderId}/delivered`, { method: 'PATCH' });
     fetchOrders();
+  }
+
+  function startEdit(o) {
+    setEditOrderId(o.id);
+    setEditForm({
+      clientName: o.clientName,
+      clientPhone: o.clientPhone,
+      clientAddress: o.clientAddress || '',
+      deliveryType: o.deliveryType,
+      notes: o.notes || '',
+      items: o.items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        name: i.product?.name || 'Producto',
+      })),
+      addProductId: '',
+    });
+  }
+
+  function cancelEdit() {
+    setEditOrderId(null);
+    setEditForm(null);
+  }
+
+  async function saveEdit(orderId) {
+    const { clientName, clientPhone, clientAddress, deliveryType, notes, items } = editForm;
+    if (items.length === 0) { alert('El pedido debe tener al menos un producto.'); return; }
+    await fetch(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientName,
+        clientPhone,
+        clientAddress: deliveryType === 'delivery' ? clientAddress : null,
+        deliveryType,
+        notes,
+        items: items.map(({ productId, quantity, unitPrice }) => ({ productId, quantity, unitPrice })),
+      }),
+    });
+    cancelEdit();
+    fetchOrders();
+  }
+
+  function EditOrderRow({ orderId }) {
+    if (editOrderId !== orderId) return null;
+
+    const liveTotal = editForm.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+
+    function setField(field, value) {
+      setEditForm((f) => ({ ...f, [field]: value }));
+    }
+
+    function changeQty(idx, delta) {
+      setEditForm((f) => {
+        const items = f.items.map((item, i) =>
+          i === idx ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
+        );
+        return { ...f, items };
+      });
+    }
+
+    function removeItem(idx) {
+      setEditForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
+    }
+
+    function addItem() {
+      const product = menuProducts.find((p) => p.id === Number(editForm.addProductId));
+      if (!product) return;
+      setEditForm((f) => ({
+        ...f,
+        addProductId: '',
+        items: [...f.items, { productId: product.id, quantity: 1, unitPrice: product.price, name: product.name }],
+      }));
+    }
+
+    return (
+      <tr className="bg-brand-card border-t border-brand-yellow/30">
+        <td colSpan={8} className="px-4 py-4">
+          <div className="space-y-4">
+
+            {/* Datos del cliente */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                className={INPUT}
+                placeholder="Nombre del cliente"
+                value={editForm.clientName}
+                onChange={(e) => setField('clientName', e.target.value)}
+              />
+              <input
+                className={INPUT}
+                placeholder="Teléfono"
+                value={editForm.clientPhone}
+                onChange={(e) => setField('clientPhone', e.target.value)}
+              />
+              <select
+                className={INPUT}
+                value={editForm.deliveryType}
+                onChange={(e) => setField('deliveryType', e.target.value)}
+              >
+                <option value="delivery">🛵 Delivery</option>
+                <option value="pickup">🏠 Retiro en local</option>
+              </select>
+              {editForm.deliveryType === 'delivery' && (
+                <input
+                  className={INPUT}
+                  placeholder="Dirección"
+                  value={editForm.clientAddress}
+                  onChange={(e) => setField('clientAddress', e.target.value)}
+                />
+              )}
+            </div>
+
+            {/* Notas */}
+            <textarea
+              className={`${INPUT} w-full resize-none`}
+              rows={2}
+              placeholder="Notas (opcional)"
+              value={editForm.notes}
+              onChange={(e) => setField('notes', e.target.value)}
+            />
+
+            {/* Items */}
+            <div className="space-y-2">
+              {editForm.items.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm flex-1 min-w-[120px]">{item.name}</span>
+                  <span className="text-xs text-brand-muted">
+                    {SYMBOL}{item.unitPrice.toLocaleString('es-PY')}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => changeQty(idx, -1)}
+                      className="w-6 h-6 rounded bg-brand-surface border border-brand-border text-sm font-bold hover:border-brand-yellow transition-colors"
+                    >−</button>
+                    <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => changeQty(idx, 1)}
+                      className="w-6 h-6 rounded bg-brand-surface border border-brand-border text-sm font-bold hover:border-brand-yellow transition-colors"
+                    >+</button>
+                  </div>
+                  <span className="text-xs text-brand-yellow font-semibold w-20 text-right">
+                    {SYMBOL}{(item.unitPrice * item.quantity).toLocaleString('es-PY')}
+                  </span>
+                  <button type="button" onClick={() => removeItem(idx)} className={BTN_DANGER_SM}>×</button>
+                </div>
+              ))}
+
+              {/* Agregar producto */}
+              <div className="flex gap-2 items-center flex-wrap pt-1">
+                <select
+                  className={`${INPUT} flex-1 min-w-[180px]`}
+                  value={editForm.addProductId}
+                  onChange={(e) => setField('addProductId', e.target.value)}
+                >
+                  <option value="">Agregar producto…</option>
+                  {menuProducts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — {SYMBOL}{p.price.toLocaleString('es-PY')}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={addItem}
+                  disabled={!editForm.addProductId}
+                  className={`${BTN_OUTLINE} disabled:opacity-40`}
+                >
+                  Agregar
+                </button>
+              </div>
+            </div>
+
+            {/* Total + acciones */}
+            <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-brand-border">
+              <span className="text-sm font-semibold text-brand-yellow">
+                Total: {SYMBOL}{liveTotal.toLocaleString('es-PY')}
+              </span>
+              <div className="flex gap-2">
+                <button type="button" onClick={cancelEdit} className={BTN_OUTLINE}>Cancelar</button>
+                <button type="button" onClick={() => saveEdit(orderId)} className={BTN_PRIMARY}>
+                  Guardar cambios
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </td>
+      </tr>
+    );
   }
 
   const matchesSearch = (o) =>
@@ -166,28 +362,32 @@ function OrdersTab() {
           <p className="text-brand-muted text-sm py-6 text-center border border-brand-border rounded-xl border-dashed">Sin pedidos pendientes</p>
         ) : (
           <OrderTable rows={pendingOrders.map((o) => (
-            <OrderRow key={o.id} o={o} actions={
-              <div className="flex gap-2 items-center">
-                <span className="hidden md:inline">
-                  <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
-                </span>
-                {o.deliveryType === 'delivery' && (
-                  <select
-                    className={`${INPUT} py-1 text-xs`}
-                    value={selectedDriver[o.id] || ''}
-                    onChange={(e) => setSelectedDriver((prev) => ({ ...prev, [o.id]: e.target.value }))}
-                  >
-                    <option value="">Repartidor…</option>
-                    {activeDrivers.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
-                )}
-                <button onClick={() => confirmAndAssign(o)} className={`${BTN_PRIMARY} text-xs px-3 py-1`}>
-                  {o.deliveryType === 'delivery' ? 'Confirmar y asignar' : 'Confirmar'}
-                </button>
-              </div>
-            } />
+            <React.Fragment key={o.id}>
+              <OrderRow o={o} actions={
+                <div className="flex gap-2 items-center">
+                  <button onClick={() => startEdit(o)} className={BTN_YELLOW_SM}>Editar</button>
+                  <span className="hidden md:inline">
+                    <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
+                  </span>
+                  {o.deliveryType === 'delivery' && (
+                    <select
+                      className={`${INPUT} py-1 text-xs`}
+                      value={selectedDriver[o.id] || ''}
+                      onChange={(e) => setSelectedDriver((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                    >
+                      <option value="">Repartidor…</option>
+                      {activeDrivers.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  )}
+                  <button onClick={() => confirmAndAssign(o)} className={`${BTN_PRIMARY} text-xs px-3 py-1`}>
+                    {o.deliveryType === 'delivery' ? 'Confirmar y asignar' : 'Confirmar'}
+                  </button>
+                </div>
+              } />
+              <EditOrderRow orderId={o.id} />
+            </React.Fragment>
           ))} />
         )}
       </section>
@@ -200,16 +400,20 @@ function OrdersTab() {
           <p className="text-brand-muted text-sm py-6 text-center border border-brand-border rounded-xl border-dashed">Sin pedidos en curso</p>
         ) : (
           <OrderTable rows={activeOrders.map((o) => (
-            <OrderRow key={o.id} o={o} actions={
-              <div className="flex gap-2 items-center">
-                <span className="hidden md:inline">
-                  <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
-                </span>
-                {o.deliveryType === 'pickup' && o.status === 'assigned' ? (
-                  <button onClick={() => markDelivered(o.id)} className={BTN_GREEN}>Entregado en local</button>
-                ) : null}
-              </div>
-            } />
+            <React.Fragment key={o.id}>
+              <OrderRow o={o} actions={
+                <div className="flex gap-2 items-center">
+                  <button onClick={() => startEdit(o)} className={BTN_YELLOW_SM}>Editar</button>
+                  <span className="hidden md:inline">
+                    <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
+                  </span>
+                  {o.deliveryType === 'pickup' && o.status === 'assigned' ? (
+                    <button onClick={() => markDelivered(o.id)} className={BTN_GREEN}>Entregado en local</button>
+                  ) : null}
+                </div>
+              } />
+              <EditOrderRow orderId={o.id} />
+            </React.Fragment>
           ))} />
         )}
       </section>
@@ -220,11 +424,17 @@ function OrdersTab() {
             Historial <span className="ml-1">({doneOrders.length})</span>
           </h2>
           <OrderTable rows={doneOrders.map((o) => (
-            <OrderRow key={o.id} o={o} actions={
-              <span className="hidden md:inline">
-                <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
-              </span>
-            } />
+            <React.Fragment key={o.id}>
+              <OrderRow o={o} actions={
+                <div className="flex gap-2 items-center">
+                  <button onClick={() => startEdit(o)} className={BTN_YELLOW_SM}>Editar</button>
+                  <span className="hidden md:inline">
+                    <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
+                  </span>
+                </div>
+              } />
+              <EditOrderRow orderId={o.id} />
+            </React.Fragment>
           ))} />
         </section>
       )}
