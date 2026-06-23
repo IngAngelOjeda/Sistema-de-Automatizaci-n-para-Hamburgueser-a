@@ -66,7 +66,7 @@ const TABLE_HEADERS = ['#', 'Cliente', 'Tipo', 'Dirección', 'Total', 'Estado', 
 function OrderRow({ o, actions }) {
   return (
     <tr className="border-t border-brand-border hover:bg-white/5 transition-colors">
-      <td className="px-4 py-3 font-display text-brand-yellow text-base tracking-wide">{o.orderNumber}</td>
+      <td className="px-4 py-3 font-display text-brand-yellow text-base tracking-wide whitespace-nowrap">{o.orderNumber}</td>
       <td className="px-4 py-3 text-sm font-medium">{o.clientName}</td>
       <td className="px-4 py-3 text-lg">{o.deliveryType === 'delivery' ? '🛵' : '🏠'}</td>
       <td className="px-4 py-3 text-xs text-brand-muted max-w-[160px] truncate">
@@ -85,7 +85,7 @@ function OrderRow({ o, actions }) {
 function OrderTable({ rows }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-brand-border">
-      <table className="w-full text-sm bg-brand-surface min-w-[640px]">
+      <table className="w-full text-sm bg-brand-surface min-w-[800px]">
         <thead className="bg-black/40 text-left">
           <tr>
             {TABLE_HEADERS.map((h) => (
@@ -883,7 +883,7 @@ export default function Admin() {
 
   return (
     <PinGate>
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         <h1 className="font-display text-brand-yellow text-4xl tracking-wide mb-5">PANEL ADMIN</h1>
 
         <div className="flex border-b border-brand-border mb-6 overflow-x-auto">
