@@ -117,6 +117,49 @@ router.patch('/:id/status', async (req, res) => {
   }
 });
 
+// PATCH /api/orders/:id  (full edit)
+router.patch('/:id', async (req, res) => {
+  try {
+    const { clientName, clientPhone, clientAddress, deliveryType, notes, items } = req.body;
+
+    const validTypes = ['delivery', 'pickup'];
+    if (!validTypes.includes(deliveryType)) return res.status(400).json({ error: 'Invalid deliveryType' });
+    if (!items || items.length === 0) return res.status(400).json({ error: 'At least one item required' });
+
+    const totalAmount = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+
+    const order = await prisma.$transaction(async (tx) => {
+      await tx.orderItem.deleteMany({ where: { orderId: Number(req.params.id) } });
+      return tx.order.update({
+        where: { id: Number(req.params.id) },
+        data: {
+          clientName,
+          clientPhone,
+          clientAddress: clientAddress || null,
+          deliveryType,
+          notes: notes || null,
+          totalAmount,
+          items: {
+            create: items.map((i) => ({
+              productId: i.productId,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+            })),
+          },
+        },
+        include: { items: { include: { product: true } }, delivery: { include: { driver: true } } },
+      });
+    });
+
+    const io = req.app.get('io');
+    io.emit('order_updated', order);
+
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE /api/orders/:id
 router.delete('/:id', async (req, res) => {
   try {
