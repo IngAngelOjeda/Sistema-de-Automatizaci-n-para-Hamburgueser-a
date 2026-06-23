@@ -97,6 +97,157 @@ function OrderTable({ rows }) {
   );
 }
 
+// ── EditOrderRow ──────────────────────────────────────────────────────────────
+function EditOrderRow({ orderId, editOrderId, editForm, setEditForm, menuProducts, cancelEdit, saveEdit }) {
+  if (editOrderId !== orderId) return null;
+
+  const liveTotal = editForm.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+
+  function setField(field, value) {
+    setEditForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function changeQty(idx, delta) {
+    setEditForm((f) => {
+      const items = f.items.map((item, i) =>
+        i === idx ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
+      );
+      return { ...f, items };
+    });
+  }
+
+  function removeItem(idx) {
+    setEditForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
+  }
+
+  function addItem() {
+    const product = menuProducts.find((p) => p.id === Number(editForm.addProductId));
+    if (!product) return;
+    setEditForm((f) => ({
+      ...f,
+      addProductId: '',
+      items: [...f.items, { _key: Date.now(), productId: product.id, quantity: 1, unitPrice: product.price, name: product.name }],
+    }));
+  }
+
+  return (
+    <tr className="bg-brand-card border-t border-brand-yellow/30">
+      <td colSpan={8} className="px-4 py-4">
+        <div className="space-y-4">
+
+          {/* Datos del cliente */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              className={INPUT}
+              placeholder="Nombre del cliente"
+              value={editForm.clientName}
+              onChange={(e) => setField('clientName', e.target.value)}
+            />
+            <input
+              className={INPUT}
+              placeholder="Teléfono"
+              value={editForm.clientPhone}
+              onChange={(e) => setField('clientPhone', e.target.value)}
+            />
+            <select
+              className={INPUT}
+              value={editForm.deliveryType}
+              onChange={(e) => setField('deliveryType', e.target.value)}
+            >
+              <option value="delivery">🛵 Delivery</option>
+              <option value="pickup">🏠 Retiro en local</option>
+            </select>
+            {editForm.deliveryType === 'delivery' && (
+              <input
+                className={INPUT}
+                placeholder="Dirección"
+                value={editForm.clientAddress}
+                onChange={(e) => setField('clientAddress', e.target.value)}
+              />
+            )}
+          </div>
+
+          {/* Notas */}
+          <textarea
+            className={`${INPUT} w-full resize-none`}
+            rows={2}
+            placeholder="Notas (opcional)"
+            value={editForm.notes}
+            onChange={(e) => setField('notes', e.target.value)}
+          />
+
+          {/* Items */}
+          <div className="space-y-2">
+            {editForm.items.map((item, idx) => (
+              <div key={item._key} className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm flex-1 min-w-[120px]">{item.name}</span>
+                <span className="text-xs text-brand-muted">
+                  {SYMBOL}{item.unitPrice.toLocaleString('es-PY')}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => changeQty(idx, -1)}
+                    className={BTN_QTY}
+                  >−</button>
+                  <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => changeQty(idx, 1)}
+                    className={BTN_QTY}
+                  >+</button>
+                </div>
+                <span className="text-xs text-brand-yellow font-semibold w-20 text-right">
+                  {SYMBOL}{(item.unitPrice * item.quantity).toLocaleString('es-PY')}
+                </span>
+                <button type="button" onClick={() => removeItem(idx)} className={BTN_DANGER_SM}>×</button>
+              </div>
+            ))}
+
+            {/* Agregar producto */}
+            <div className="flex gap-2 items-center flex-wrap pt-1">
+              <select
+                className={`${INPUT} flex-1 min-w-[180px]`}
+                value={editForm.addProductId}
+                onChange={(e) => setField('addProductId', e.target.value)}
+              >
+                <option value="">Agregar producto…</option>
+                {menuProducts.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — {SYMBOL}{p.price.toLocaleString('es-PY')}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={addItem}
+                disabled={!editForm.addProductId}
+                className={`${BTN_OUTLINE} disabled:opacity-40`}
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+
+          {/* Total + acciones */}
+          <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-brand-border">
+            <span className="text-sm font-semibold text-brand-yellow">
+              Total: {SYMBOL}{liveTotal.toLocaleString('es-PY')}
+            </span>
+            <div className="flex gap-2">
+              <button type="button" onClick={cancelEdit} className={BTN_OUTLINE}>Cancelar</button>
+              <button type="button" onClick={() => saveEdit(orderId)} className={BTN_PRIMARY}>
+                Guardar cambios
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 // ── Tab: Pedidos ──────────────────────────────────────────────────────────────
 function OrdersTab() {
   const [orders, setOrders] = useState([]);
@@ -188,156 +339,6 @@ function OrdersTab() {
     fetchOrders();
   }
 
-  function EditOrderRow({ orderId }) {
-    if (editOrderId !== orderId) return null;
-
-    const liveTotal = editForm.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-
-    function setField(field, value) {
-      setEditForm((f) => ({ ...f, [field]: value }));
-    }
-
-    function changeQty(idx, delta) {
-      setEditForm((f) => {
-        const items = f.items.map((item, i) =>
-          i === idx ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-        );
-        return { ...f, items };
-      });
-    }
-
-    function removeItem(idx) {
-      setEditForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
-    }
-
-    function addItem() {
-      const product = menuProducts.find((p) => p.id === Number(editForm.addProductId));
-      if (!product) return;
-      setEditForm((f) => ({
-        ...f,
-        addProductId: '',
-        items: [...f.items, { _key: Date.now(), productId: product.id, quantity: 1, unitPrice: product.price, name: product.name }],
-      }));
-    }
-
-    return (
-      <tr className="bg-brand-card border-t border-brand-yellow/30">
-        <td colSpan={8} className="px-4 py-4">
-          <div className="space-y-4">
-
-            {/* Datos del cliente */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                className={INPUT}
-                placeholder="Nombre del cliente"
-                value={editForm.clientName}
-                onChange={(e) => setField('clientName', e.target.value)}
-              />
-              <input
-                className={INPUT}
-                placeholder="Teléfono"
-                value={editForm.clientPhone}
-                onChange={(e) => setField('clientPhone', e.target.value)}
-              />
-              <select
-                className={INPUT}
-                value={editForm.deliveryType}
-                onChange={(e) => setField('deliveryType', e.target.value)}
-              >
-                <option value="delivery">🛵 Delivery</option>
-                <option value="pickup">🏠 Retiro en local</option>
-              </select>
-              {editForm.deliveryType === 'delivery' && (
-                <input
-                  className={INPUT}
-                  placeholder="Dirección"
-                  value={editForm.clientAddress}
-                  onChange={(e) => setField('clientAddress', e.target.value)}
-                />
-              )}
-            </div>
-
-            {/* Notas */}
-            <textarea
-              className={`${INPUT} w-full resize-none`}
-              rows={2}
-              placeholder="Notas (opcional)"
-              value={editForm.notes}
-              onChange={(e) => setField('notes', e.target.value)}
-            />
-
-            {/* Items */}
-            <div className="space-y-2">
-              {editForm.items.map((item, idx) => (
-                <div key={item._key} className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm flex-1 min-w-[120px]">{item.name}</span>
-                  <span className="text-xs text-brand-muted">
-                    {SYMBOL}{item.unitPrice.toLocaleString('es-PY')}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => changeQty(idx, -1)}
-                      className={BTN_QTY}
-                    >−</button>
-                    <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
-                    <button
-                      type="button"
-                      onClick={() => changeQty(idx, 1)}
-                      className={BTN_QTY}
-                    >+</button>
-                  </div>
-                  <span className="text-xs text-brand-yellow font-semibold w-20 text-right">
-                    {SYMBOL}{(item.unitPrice * item.quantity).toLocaleString('es-PY')}
-                  </span>
-                  <button type="button" onClick={() => removeItem(idx)} className={BTN_DANGER_SM}>×</button>
-                </div>
-              ))}
-
-              {/* Agregar producto */}
-              <div className="flex gap-2 items-center flex-wrap pt-1">
-                <select
-                  className={`${INPUT} flex-1 min-w-[180px]`}
-                  value={editForm.addProductId}
-                  onChange={(e) => setField('addProductId', e.target.value)}
-                >
-                  <option value="">Agregar producto…</option>
-                  {menuProducts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — {SYMBOL}{p.price.toLocaleString('es-PY')}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={addItem}
-                  disabled={!editForm.addProductId}
-                  className={`${BTN_OUTLINE} disabled:opacity-40`}
-                >
-                  Agregar
-                </button>
-              </div>
-            </div>
-
-            {/* Total + acciones */}
-            <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-brand-border">
-              <span className="text-sm font-semibold text-brand-yellow">
-                Total: {SYMBOL}{liveTotal.toLocaleString('es-PY')}
-              </span>
-              <div className="flex gap-2">
-                <button type="button" onClick={cancelEdit} className={BTN_OUTLINE}>Cancelar</button>
-                <button type="button" onClick={() => saveEdit(orderId)} className={BTN_PRIMARY}>
-                  Guardar cambios
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
   const matchesSearch = (o) =>
     !search ||
     o.orderNumber.includes(search.toUpperCase()) ||
@@ -389,7 +390,15 @@ function OrdersTab() {
                   </button>
                 </div>
               } />
-              <EditOrderRow orderId={o.id} />
+              <EditOrderRow
+                orderId={o.id}
+                editOrderId={editOrderId}
+                editForm={editForm}
+                setEditForm={setEditForm}
+                menuProducts={menuProducts}
+                cancelEdit={cancelEdit}
+                saveEdit={saveEdit}
+              />
             </React.Fragment>
           ))} />
         )}
@@ -415,7 +424,15 @@ function OrdersTab() {
                   ) : null}
                 </div>
               } />
-              <EditOrderRow orderId={o.id} />
+              <EditOrderRow
+                orderId={o.id}
+                editOrderId={editOrderId}
+                editForm={editForm}
+                setEditForm={setEditForm}
+                menuProducts={menuProducts}
+                cancelEdit={cancelEdit}
+                saveEdit={saveEdit}
+              />
             </React.Fragment>
           ))} />
         )}
@@ -436,7 +453,15 @@ function OrdersTab() {
                   </span>
                 </div>
               } />
-              <EditOrderRow orderId={o.id} />
+              <EditOrderRow
+                orderId={o.id}
+                editOrderId={editOrderId}
+                editForm={editForm}
+                setEditForm={setEditForm}
+                menuProducts={menuProducts}
+                cancelEdit={cancelEdit}
+                saveEdit={saveEdit}
+              />
             </React.Fragment>
           ))} />
         </section>
