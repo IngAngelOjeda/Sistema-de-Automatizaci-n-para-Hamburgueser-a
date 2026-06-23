@@ -20,6 +20,7 @@ const BTN_OUTLINE = 'border border-brand-border text-brand-muted px-4 py-2 round
 const BTN_GREEN = 'bg-green-500/10 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-xs font-semibold hover:bg-green-500/20 transition-colors whitespace-nowrap';
 const BTN_DANGER_SM = 'text-xs text-red-500 hover:text-red-400 transition-colors';
 const BTN_YELLOW_SM = 'text-xs text-brand-yellow hover:text-brand-yellow-light transition-colors';
+const BTN_QTY = 'w-6 h-6 rounded bg-brand-surface border border-brand-border text-sm font-bold hover:border-brand-yellow transition-colors';
 
 // ── PinGate ───────────────────────────────────────────────────────────────────
 function PinGate({ children }) {
@@ -151,7 +152,8 @@ function OrdersTab() {
       clientAddress: o.clientAddress || '',
       deliveryType: o.deliveryType,
       notes: o.notes || '',
-      items: o.items.map((i) => ({
+      items: o.items.map((i, idx) => ({
+        _key: idx,
         productId: i.productId,
         quantity: i.quantity,
         unitPrice: i.unitPrice,
@@ -169,7 +171,7 @@ function OrdersTab() {
   async function saveEdit(orderId) {
     const { clientName, clientPhone, clientAddress, deliveryType, notes, items } = editForm;
     if (items.length === 0) { alert('El pedido debe tener al menos un producto.'); return; }
-    await fetch(`/api/orders/${orderId}`, {
+    const res = await fetch(`/api/orders/${orderId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -181,6 +183,7 @@ function OrdersTab() {
         items: items.map(({ productId, quantity, unitPrice }) => ({ productId, quantity, unitPrice })),
       }),
     });
+    if (!res.ok) { alert('Error al guardar. Intente nuevamente.'); return; }
     cancelEdit();
     fetchOrders();
   }
@@ -213,7 +216,7 @@ function OrdersTab() {
       setEditForm((f) => ({
         ...f,
         addProductId: '',
-        items: [...f.items, { productId: product.id, quantity: 1, unitPrice: product.price, name: product.name }],
+        items: [...f.items, { _key: Date.now(), productId: product.id, quantity: 1, unitPrice: product.price, name: product.name }],
       }));
     }
 
@@ -266,7 +269,7 @@ function OrdersTab() {
             {/* Items */}
             <div className="space-y-2">
               {editForm.items.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 flex-wrap">
+                <div key={item._key} className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm flex-1 min-w-[120px]">{item.name}</span>
                   <span className="text-xs text-brand-muted">
                     {SYMBOL}{item.unitPrice.toLocaleString('es-PY')}
@@ -275,13 +278,13 @@ function OrdersTab() {
                     <button
                       type="button"
                       onClick={() => changeQty(idx, -1)}
-                      className="w-6 h-6 rounded bg-brand-surface border border-brand-border text-sm font-bold hover:border-brand-yellow transition-colors"
+                      className={BTN_QTY}
                     >−</button>
                     <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
                     <button
                       type="button"
                       onClick={() => changeQty(idx, 1)}
-                      className="w-6 h-6 rounded bg-brand-surface border border-brand-border text-sm font-bold hover:border-brand-yellow transition-colors"
+                      className={BTN_QTY}
                     >+</button>
                   </div>
                   <span className="text-xs text-brand-yellow font-semibold w-20 text-right">
