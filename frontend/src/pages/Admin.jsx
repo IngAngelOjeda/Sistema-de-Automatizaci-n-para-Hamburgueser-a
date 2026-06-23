@@ -388,7 +388,7 @@ function OrdersTab() {
                     </select>
                   )}
                   <button onClick={() => confirmAndAssign(o)} className={BTN_SM_PRIMARY}>
-                    {o.deliveryType === 'delivery' ? 'Confirmar y asignar' : 'Confirmar'}
+                    Confirmar
                   </button>
                 </div>
               } />
