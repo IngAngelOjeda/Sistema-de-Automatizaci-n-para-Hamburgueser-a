@@ -21,6 +21,8 @@ const BTN_GREEN = 'bg-green-500/10 text-green-400 border border-green-500/30 px-
 const BTN_DANGER_SM = 'text-xs text-red-500 hover:text-red-400 transition-colors';
 const BTN_YELLOW_SM = 'text-xs text-brand-yellow hover:text-brand-yellow-light transition-colors';
 const BTN_QTY = 'w-6 h-6 rounded bg-brand-surface border border-brand-border text-sm font-bold hover:border-brand-yellow transition-colors';
+const BTN_SM_PRIMARY = 'bg-brand-yellow text-black font-semibold px-3 py-1 rounded-lg text-xs hover:bg-brand-yellow-light transition-colors whitespace-nowrap';
+const BTN_SM_OUTLINE = 'border border-brand-border text-brand-muted px-3 py-1 rounded-lg text-xs hover:border-brand-yellow hover:text-brand-yellow transition-colors';
 
 // ── PinGate ───────────────────────────────────────────────────────────────────
 function PinGate({ children }) {
@@ -369,9 +371,9 @@ function OrdersTab() {
             <React.Fragment key={o.id}>
               <OrderRow o={o} actions={
                 <div className="flex gap-2 items-center">
-                  <button onClick={() => startEdit(o)} className={BTN_YELLOW_SM}>Editar</button>
+                  <button onClick={() => startEdit(o)} className={BTN_SM_OUTLINE}>Editar</button>
                   <span className="hidden md:inline">
-                    <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
+                    <button onClick={() => printTicket(o)} className={BTN_SM_OUTLINE}>Imprimir</button>
                   </span>
                   {o.deliveryType === 'delivery' && (
                     <select
@@ -385,7 +387,7 @@ function OrdersTab() {
                       ))}
                     </select>
                   )}
-                  <button onClick={() => confirmAndAssign(o)} className={`${BTN_PRIMARY} text-xs px-3 py-1`}>
+                  <button onClick={() => confirmAndAssign(o)} className={BTN_SM_PRIMARY}>
                     {o.deliveryType === 'delivery' ? 'Confirmar y asignar' : 'Confirmar'}
                   </button>
                 </div>
@@ -415,9 +417,9 @@ function OrdersTab() {
             <React.Fragment key={o.id}>
               <OrderRow o={o} actions={
                 <div className="flex gap-2 items-center">
-                  <button onClick={() => startEdit(o)} className={BTN_YELLOW_SM}>Editar</button>
+                  <button onClick={() => startEdit(o)} className={BTN_SM_OUTLINE}>Editar</button>
                   <span className="hidden md:inline">
-                    <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
+                    <button onClick={() => printTicket(o)} className={BTN_SM_OUTLINE}>Imprimir</button>
                   </span>
                   {o.deliveryType === 'pickup' && o.status === 'assigned' ? (
                     <button onClick={() => markDelivered(o.id)} className={BTN_GREEN}>Entregado en local</button>
@@ -447,9 +449,9 @@ function OrdersTab() {
             <React.Fragment key={o.id}>
               <OrderRow o={o} actions={
                 <div className="flex gap-2 items-center">
-                  <button onClick={() => startEdit(o)} className={BTN_YELLOW_SM}>Editar</button>
+                  <button onClick={() => startEdit(o)} className={BTN_SM_OUTLINE}>Editar</button>
                   <span className="hidden md:inline">
-                    <button onClick={() => printTicket(o)} className={`${BTN_OUTLINE} text-xs px-3 py-1`}>Imprimir</button>
+                    <button onClick={() => printTicket(o)} className={BTN_SM_OUTLINE}>Imprimir</button>
                   </span>
                 </div>
               } />
