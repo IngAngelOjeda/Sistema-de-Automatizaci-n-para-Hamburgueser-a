@@ -156,6 +156,7 @@ router.patch('/:id', async (req, res) => {
 
     res.json(order);
   } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Order not found' });
     res.status(500).json({ error: err.message });
   }
 });
