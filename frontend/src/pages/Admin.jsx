@@ -99,18 +99,16 @@ function OrderTable({ rows }) {
   );
 }
 
-// ── EditOrderRow ──────────────────────────────────────────────────────────────
-function EditOrderRow({ orderId, editOrderId, editForm, setEditForm, menuProducts, cancelEdit, saveEdit }) {
-  if (editOrderId !== orderId) return null;
-
-  const liveTotal = editForm.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+// ── OrderForm (cliente + items, usado para crear y editar pedidos) ────────────
+function OrderForm({ form, setForm, menuProducts, onCancel, onSave, saveLabel }) {
+  const liveTotal = form.items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
 
   function setField(field, value) {
-    setEditForm((f) => ({ ...f, [field]: value }));
+    setForm((f) => ({ ...f, [field]: value }));
   }
 
   function changeQty(idx, delta) {
-    setEditForm((f) => {
+    setForm((f) => {
       const items = f.items.map((item, i) =>
         i === idx ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
       );
@@ -119,13 +117,13 @@ function EditOrderRow({ orderId, editOrderId, editForm, setEditForm, menuProduct
   }
 
   function removeItem(idx) {
-    setEditForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
+    setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
   }
 
   function addItem() {
-    const product = menuProducts.find((p) => p.id === Number(editForm.addProductId));
+    const product = menuProducts.find((p) => p.id === Number(form.addProductId));
     if (!product) return;
-    setEditForm((f) => ({
+    setForm((f) => ({
       ...f,
       addProductId: '',
       items: [...f.items, { _key: Date.now(), productId: product.id, quantity: 1, unitPrice: product.price, name: product.name }],
@@ -133,120 +131,169 @@ function EditOrderRow({ orderId, editOrderId, editForm, setEditForm, menuProduct
   }
 
   return (
-    <tr className="bg-brand-card border-t border-brand-yellow/30">
-      <td colSpan={8} className="px-4 py-4">
-        <div className="space-y-4">
+    <div className="space-y-4">
 
-          {/* Datos del cliente */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              className={INPUT}
-              placeholder="Nombre del cliente"
-              value={editForm.clientName}
-              onChange={(e) => setField('clientName', e.target.value)}
-            />
-            <input
-              className={INPUT}
-              placeholder="Teléfono"
-              value={editForm.clientPhone}
-              onChange={(e) => setField('clientPhone', e.target.value)}
-            />
-            <select
-              className={INPUT}
-              value={editForm.deliveryType}
-              onChange={(e) => setField('deliveryType', e.target.value)}
-            >
-              <option value="delivery">🛵 Delivery</option>
-              <option value="pickup">🏠 Retiro en local</option>
-            </select>
-            {editForm.deliveryType === 'delivery' && (
-              <input
-                className={INPUT}
-                placeholder="Dirección"
-                value={editForm.clientAddress}
-                onChange={(e) => setField('clientAddress', e.target.value)}
-              />
-            )}
-          </div>
-
-          {/* Notas */}
-          <textarea
-            className={`${INPUT} w-full resize-none`}
-            rows={2}
-            placeholder="Notas (opcional)"
-            value={editForm.notes}
-            onChange={(e) => setField('notes', e.target.value)}
+      {/* Datos del cliente */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <input
+          className={INPUT}
+          placeholder="Nombre del cliente"
+          value={form.clientName}
+          onChange={(e) => setField('clientName', e.target.value)}
+        />
+        <input
+          className={INPUT}
+          placeholder="Teléfono"
+          value={form.clientPhone}
+          onChange={(e) => setField('clientPhone', e.target.value)}
+        />
+        <select
+          className={INPUT}
+          value={form.deliveryType}
+          onChange={(e) => setField('deliveryType', e.target.value)}
+        >
+          <option value="delivery">🛵 Delivery</option>
+          <option value="pickup">🏠 Retiro en local</option>
+        </select>
+        {form.deliveryType === 'delivery' && (
+          <input
+            className={INPUT}
+            placeholder="Dirección"
+            value={form.clientAddress}
+            onChange={(e) => setField('clientAddress', e.target.value)}
           />
+        )}
+      </div>
 
-          {/* Items */}
-          <div className="space-y-2">
-            {editForm.items.map((item, idx) => (
-              <div key={item._key} className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm flex-1 min-w-[120px]">{item.name}</span>
-                <span className="text-xs text-brand-muted">
-                  {SYMBOL}{item.unitPrice.toLocaleString('es-PY')}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => changeQty(idx, -1)}
-                    className={BTN_QTY}
-                  >−</button>
-                  <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => changeQty(idx, 1)}
-                    className={BTN_QTY}
-                  >+</button>
-                </div>
-                <span className="text-xs text-brand-yellow font-semibold w-20 text-right">
-                  {SYMBOL}{(item.unitPrice * item.quantity).toLocaleString('es-PY')}
-                </span>
-                <button type="button" onClick={() => removeItem(idx)} className={BTN_DANGER_SM}>×</button>
-              </div>
-            ))}
+      {/* Notas */}
+      <textarea
+        className={`${INPUT} w-full resize-none`}
+        rows={2}
+        placeholder="Notas (opcional)"
+        value={form.notes}
+        onChange={(e) => setField('notes', e.target.value)}
+      />
 
-            {/* Agregar producto */}
-            <div className="flex gap-2 items-center flex-wrap pt-1">
-              <select
-                className={`${INPUT} flex-1 min-w-[180px]`}
-                value={editForm.addProductId}
-                onChange={(e) => setField('addProductId', e.target.value)}
-              >
-                <option value="">Agregar producto…</option>
-                {menuProducts.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} — {SYMBOL}{p.price.toLocaleString('es-PY')}
-                  </option>
-                ))}
-              </select>
+      {/* Items */}
+      <div className="space-y-2">
+        {form.items.map((item, idx) => (
+          <div key={item._key} className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm flex-1 min-w-[120px]">{item.name}</span>
+            <span className="text-xs text-brand-muted">
+              {SYMBOL}{item.unitPrice.toLocaleString('es-PY')}
+            </span>
+            <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={addItem}
-                disabled={!editForm.addProductId}
-                className={`${BTN_OUTLINE} disabled:opacity-40`}
-              >
-                Agregar
-              </button>
+                onClick={() => changeQty(idx, -1)}
+                className={BTN_QTY}
+              >−</button>
+              <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
+              <button
+                type="button"
+                onClick={() => changeQty(idx, 1)}
+                className={BTN_QTY}
+              >+</button>
             </div>
-          </div>
-
-          {/* Total + acciones */}
-          <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-brand-border">
-            <span className="text-sm font-semibold text-brand-yellow">
-              Total: {SYMBOL}{liveTotal.toLocaleString('es-PY')}
+            <span className="text-xs text-brand-yellow font-semibold w-20 text-right">
+              {SYMBOL}{(item.unitPrice * item.quantity).toLocaleString('es-PY')}
             </span>
-            <div className="flex gap-2">
-              <button type="button" onClick={cancelEdit} className={BTN_OUTLINE}>Cancelar</button>
-              <button type="button" onClick={() => saveEdit(orderId)} className={BTN_PRIMARY}>
-                Guardar cambios
-              </button>
-            </div>
+            <button type="button" onClick={() => removeItem(idx)} className={BTN_DANGER_SM}>×</button>
           </div>
+        ))}
+        {form.items.length === 0 && (
+          <p className="text-brand-muted text-xs">Sin productos agregados todavía.</p>
+        )}
 
+        {/* Agregar producto */}
+        <div className="flex gap-2 items-center flex-wrap pt-1">
+          <select
+            className={`${INPUT} flex-1 min-w-[180px]`}
+            value={form.addProductId}
+            onChange={(e) => setField('addProductId', e.target.value)}
+          >
+            <option value="">Agregar producto…</option>
+            {menuProducts.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} — {SYMBOL}{p.price.toLocaleString('es-PY')}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={addItem}
+            disabled={!form.addProductId}
+            className={`${BTN_OUTLINE} disabled:opacity-40`}
+          >
+            Agregar
+          </button>
         </div>
+      </div>
+
+      {/* Total + acciones */}
+      <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-brand-border">
+        <span className="text-sm font-semibold text-brand-yellow">
+          Total: {SYMBOL}{liveTotal.toLocaleString('es-PY')}
+        </span>
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancel} className={BTN_OUTLINE}>Cancelar</button>
+          <button type="button" onClick={onSave} className={BTN_PRIMARY}>
+            {saveLabel}
+          </button>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+// ── EditOrderRow ──────────────────────────────────────────────────────────────
+function EditOrderRow({ orderId, editOrderId, editForm, setEditForm, menuProducts, cancelEdit, saveEdit }) {
+  if (editOrderId !== orderId) return null;
+
+  return (
+    <tr className="bg-brand-card border-t border-brand-yellow/30">
+      <td colSpan={8} className="px-4 py-4">
+        <OrderForm
+          form={editForm}
+          setForm={setEditForm}
+          menuProducts={menuProducts}
+          onCancel={cancelEdit}
+          onSave={() => saveEdit(orderId)}
+          saveLabel="Guardar cambios"
+        />
       </td>
     </tr>
+  );
+}
+
+// ── NewOrderPanel ─────────────────────────────────────────────────────────────
+function blankOrderForm() {
+  return {
+    clientName: '',
+    clientPhone: '',
+    clientAddress: '',
+    deliveryType: 'pickup',
+    notes: '',
+    items: [],
+    addProductId: '',
+  };
+}
+
+function NewOrderPanel({ show, form, setForm, menuProducts, onCancel, onSave }) {
+  if (!show) return null;
+  return (
+    <div className="bg-brand-card border border-brand-yellow/30 rounded-xl p-4">
+      <h3 className="text-sm font-semibold text-brand-yellow uppercase tracking-wider mb-3">Nuevo pedido</h3>
+      <OrderForm
+        form={form}
+        setForm={setForm}
+        menuProducts={menuProducts}
+        onCancel={onCancel}
+        onSave={onSave}
+        saveLabel="Crear pedido"
+      />
+    </div>
   );
 }
 
@@ -259,6 +306,8 @@ function OrdersTab() {
   const [editOrderId, setEditOrderId] = useState(null);
   const [editForm, setEditForm]       = useState(null);
   const [menuProducts, setMenuProducts] = useState([]);
+  const [showNewOrder, setShowNewOrder] = useState(false);
+  const [newOrderForm, setNewOrderForm] = useState(blankOrderForm());
 
   async function fetchOrders() {
     const data = await fetch('/api/orders').then((r) => r.json());
@@ -321,6 +370,36 @@ function OrdersTab() {
     setEditForm(null);
   }
 
+  function openNewOrder() {
+    setNewOrderForm(blankOrderForm());
+    setShowNewOrder(true);
+  }
+
+  function cancelNewOrder() {
+    setShowNewOrder(false);
+  }
+
+  async function createOrder() {
+    const { clientName, clientPhone, clientAddress, deliveryType, notes, items } = newOrderForm;
+    if (!clientName.trim()) { alert('Ingresá el nombre del cliente.'); return; }
+    if (items.length === 0) { alert('El pedido debe tener al menos un producto.'); return; }
+    const res = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientName,
+        clientPhone,
+        clientAddress: deliveryType === 'delivery' ? clientAddress : null,
+        deliveryType,
+        notes,
+        items: items.map(({ productId, quantity, unitPrice }) => ({ productId, quantity, unitPrice })),
+      }),
+    });
+    if (!res.ok) { alert('Error al crear el pedido. Intente nuevamente.'); return; }
+    setShowNewOrder(false);
+    fetchOrders();
+  }
+
   async function saveEdit(orderId) {
     const { clientName, clientPhone, clientAddress, deliveryType, notes, items } = editForm;
     if (items.length === 0) { alert('El pedido debe tener al menos un producto.'); return; }
@@ -353,11 +432,25 @@ function OrdersTab() {
 
   return (
     <div className="space-y-6">
-      <input
-        className={`${INPUT} w-full sm:w-64`}
-        placeholder="Buscar por número o cliente…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <input
+          className={`${INPUT} w-full sm:w-64`}
+          placeholder="Buscar por número o cliente…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button onClick={showNewOrder ? cancelNewOrder : openNewOrder} className={BTN_PRIMARY}>
+          {showNewOrder ? 'Cancelar' : '+ Nuevo pedido'}
+        </button>
+      </div>
+
+      <NewOrderPanel
+        show={showNewOrder}
+        form={newOrderForm}
+        setForm={setNewOrderForm}
+        menuProducts={menuProducts}
+        onCancel={cancelNewOrder}
+        onSave={createOrder}
       />
 
       <section>
@@ -473,12 +566,18 @@ function OrdersTab() {
 }
 
 // ── Tab: Menú ─────────────────────────────────────────────────────────────────
+function blankProductForm() {
+  return { name: '', description: '', price: '', category: 'hamburguesa' };
+}
+
 function MenuTab() {
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ name: '', description: '', price: '', category: 'hamburguesa' });
+  const [form, setForm] = useState(blankProductForm());
   const [editId, setEditId] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
 
   async function fetchProducts() {
     const data = await fetch('/api/menu').then((r) => r.json());
@@ -487,18 +586,28 @@ function MenuTab() {
 
   useEffect(() => { fetchProducts(); }, []);
 
+  function openNewProduct() {
+    setEditId(null);
+    setForm(blankProductForm());
+    setImageFile(null);
+    setImagePreview(null);
+    setShowForm(true);
+  }
+
   function startEdit(p) {
     setEditId(p.id);
     setForm({ name: p.name, description: p.description || '', price: String(p.price), category: p.category });
     setImageFile(null);
     setImagePreview(p.imageUrl || null);
+    setShowForm(true);
   }
 
   function cancelEdit() {
     setEditId(null);
-    setForm({ name: '', description: '', price: '', category: 'hamburguesa' });
+    setForm(blankProductForm());
     setImageFile(null);
     setImagePreview(null);
+    setShowForm(false);
   }
 
   function handleImageChange(e) {
@@ -550,9 +659,10 @@ function MenuTab() {
     }
 
     setEditId(null);
-    setForm({ name: '', description: '', price: '', category: 'hamburguesa' });
+    setForm(blankProductForm());
     setImageFile(null);
     setImagePreview(null);
+    setShowForm(false);
     fetchProducts();
   }
 
@@ -567,47 +677,77 @@ function MenuTab() {
     fetchProducts();
   }
 
+  const filteredProducts = products.filter((p) =>
+    !search ||
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.description || '').toLowerCase().includes(search.toLowerCase()) ||
+    p.category.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
-      <form onSubmit={save} className="bg-brand-card border border-brand-border p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-        <input required className={INPUT} placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <input className={INPUT} placeholder="Descripción (opcional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <input required type="number" className={INPUT} placeholder="Precio" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-        <select className={INPUT} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <input
+          className={`${INPUT} w-full sm:w-64`}
+          placeholder="Buscar producto…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <button onClick={showForm ? cancelEdit : openNewProduct} className={BTN_PRIMARY}>
+          {showForm ? 'Cancelar' : '+ Agregar producto'}
+        </button>
+      </div>
 
-        <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-lg overflow-hidden bg-brand-surface border border-brand-border flex items-center justify-center flex-shrink-0">
-            {imagePreview
-              ? <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
-              : <span className="text-2xl">{CATEGORY_EMOJI[form.category] || '🍽️'}</span>
-            }
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className={`cursor-pointer ${BTN_YELLOW_SM}`}>
-              {imagePreview ? 'Cambiar imagen' : 'Subir imagen'}
-              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
-            </label>
-            {imagePreview && editId && (
-              <button type="button" onClick={() => removeImage(editId)} className={BTN_DANGER_SM}>Quitar imagen</button>
-            )}
-            {imagePreview && !editId && (
-              <button type="button" onClick={() => { setImagePreview(null); setImageFile(null); }} className={BTN_DANGER_SM}>Quitar</button>
-            )}
-          </div>
-        </div>
+      {showForm && (
+        <div className="bg-brand-card border border-brand-yellow/30 rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-brand-yellow uppercase tracking-wider mb-3">
+            {editId ? 'Editar producto' : 'Nuevo producto'}
+          </h3>
+          <form onSubmit={save} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <input required className={INPUT} placeholder="Nombre" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <input className={INPUT} placeholder="Descripción (opcional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            <input required type="number" className={INPUT} placeholder="Precio" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+            <select className={INPUT} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
 
-        <div className="flex gap-2 sm:col-span-2 md:col-span-1">
-          <button type="submit" className={`${BTN_PRIMARY} flex-1`}>
-            {editId ? 'Guardar cambios' : 'Agregar producto'}
-          </button>
-          {editId && <button type="button" onClick={cancelEdit} className={BTN_OUTLINE}>Cancelar</button>}
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-lg overflow-hidden bg-brand-surface border border-brand-border flex items-center justify-center flex-shrink-0">
+                {imagePreview
+                  ? <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
+                  : <span className="text-2xl">{CATEGORY_EMOJI[form.category] || '🍽️'}</span>
+                }
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={`cursor-pointer ${BTN_YELLOW_SM}`}>
+                  {imagePreview ? 'Cambiar imagen' : 'Subir imagen'}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleImageChange} />
+                </label>
+                {imagePreview && editId && (
+                  <button type="button" onClick={() => removeImage(editId)} className={BTN_DANGER_SM}>Quitar imagen</button>
+                )}
+                {imagePreview && !editId && (
+                  <button type="button" onClick={() => { setImagePreview(null); setImageFile(null); }} className={BTN_DANGER_SM}>Quitar</button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2 sm:col-span-2 md:col-span-1">
+              <button type="submit" className={`${BTN_PRIMARY} flex-1`}>
+                {editId ? 'Guardar cambios' : 'Agregar producto'}
+              </button>
+              <button type="button" onClick={cancelEdit} className={BTN_OUTLINE}>Cancelar</button>
+            </div>
+          </form>
         </div>
-      </form>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {products.map((p) => (
+        {filteredProducts.length === 0 ? (
+          <p className="text-brand-muted text-sm py-6 text-center border border-brand-border rounded-xl border-dashed md:col-span-2">
+            No se encontraron productos
+          </p>
+        ) : filteredProducts.map((p) => (
           <div key={p.id} className={`bg-brand-card border border-brand-border rounded-xl p-4 flex items-start gap-3 transition-opacity ${!p.available ? 'opacity-40' : ''}`}>
             <div className="w-14 h-14 rounded-lg overflow-hidden bg-brand-surface border border-brand-border flex items-center justify-center flex-shrink-0">
               {p.imageUrl
@@ -626,7 +766,7 @@ function MenuTab() {
               {p.description && <p className="text-xs text-brand-muted truncate mt-0.5">{p.description}</p>}
             </div>
             <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
-              <button onClick={() => toggle(p.id)} className={`text-xs px-2.5 py-1 rounded-full font-semibold border transition-colors ${p.available ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
+              <button onClick={() => toggle(p.id)} className={`text-xs px-2.5 py-1 rounded-full font-semibold transition-colors ${p.available ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                 {p.available ? 'Activo' : 'Inactivo'}
               </button>
               <button onClick={() => startEdit(p)} className={BTN_YELLOW_SM}>Editar</button>
