@@ -1,6 +1,6 @@
 services:
   backend:
-    image: registry.digitalocean.com/stacklabregistry/burger-backend:1.5
+    image: registry.digitalocean.com/stacklabregistry/burger-backend:latest
     restart: unless-stopped
     environment:
       PORT: 3000
@@ -18,7 +18,7 @@ services:
       - infra
 
   frontend:
-    image: registry.digitalocean.com/stacklabregistry/burger-frontend:1.5
+    image: registry.digitalocean.com/stacklabregistry/burger-frontend:latest
     restart: unless-stopped
     depends_on:
       - backend
